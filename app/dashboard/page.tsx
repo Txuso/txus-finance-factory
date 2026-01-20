@@ -1,6 +1,7 @@
 import { Suspense } from "react"
-import { getDashboardData } from "@/lib/data/dashboard"
+import { getDashboardData, getMonthlyStats } from "@/lib/data/dashboard"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
+import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
 import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
@@ -29,6 +30,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     }
 
     const { transactions, recurringExpenses } = await getDashboardData(currentDate);
+    const monthlyStats = await getMonthlyStats(currentDate);
 
     // Cálculos para KPIs (Lógica centralizada en el servidor)
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
@@ -127,17 +129,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </TabsContent>
 
                 <TabsContent value="stats" className="mt-0">
-                    <Card className="p-12 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-2">
-                        <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-full">
-                            <PieChart className="h-10 w-10 text-slate-400" />
-                        </div>
-                        <div>
-                            <CardTitle>Panel de Estadísticas</CardTitle>
-                            <CardDescription className="max-w-xs mx-auto">
-                                Aquí aparecerán tus gráficos de evolución y comparativas mensuales muy pronto.
-                            </CardDescription>
-                        </div>
-                    </Card>
+                    <div className="grid grid-cols-1 gap-8">
+                        <MonthlyComparisonChart data={monthlyStats} />
+
+                        <Card className="p-12 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-2 bg-slate-50/50">
+                            <div className="p-4 bg-white dark:bg-slate-800 rounded-full shadow-sm">
+                                <PieChart className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-sm">Más gráficos próximamente</CardTitle>
+                                <CardDescription className="max-w-xs mx-auto text-xs">
+                                    Estamos preparando visualizaciones de ahorro neto y tendencias de categorías.
+                                </CardDescription>
+                            </div>
+                        </Card>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>

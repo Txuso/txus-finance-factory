@@ -53,6 +53,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             tipo: initialData?.tipo,
             metodo_pago: initialData?.metodo_pago,
             es_automatico: initialData?.es_automatico || false,
+            meses_aplicacion: (initialData as any)?.meses_aplicacion || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         },
     })
 
@@ -61,7 +62,8 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         if (initialData) {
             form.reset({
                 ...initialData,
-                fecha: initialData.fecha ? new Date(initialData.fecha) : undefined
+                fecha: initialData.fecha ? new Date(initialData.fecha) : undefined,
+                meses_aplicacion: (initialData as any)?.meses_aplicacion || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
             })
         }
     }, [initialData, form])
@@ -69,11 +71,17 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     async function onSubmit(data: TransactionFormValues) {
         setIsSubmitting(true)
         try {
+            // Aseguramos que los gastos sean negativos para la DB
+            const finalData = {
+                ...data,
+                monto: data.tipo === 'Ingreso' ? Math.abs(data.monto) : -Math.abs(data.monto)
+            };
+
             let result;
             if (initialData?.id) {
-                result = await updateTransaction(initialData.id, data)
+                result = await updateTransaction(initialData.id, finalData)
             } else {
-                result = await createTransaction(data)
+                result = await createTransaction(finalData)
             }
 
             if (result.error) {
@@ -257,6 +265,65 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                             </FormItem>
                         )}
                     />
+                    {/* Selector de Meses (Solo para Gasto fijo) */}
+                    {form.watch("tipo" as any) === "Gasto fijo" && (
+                        <div className="col-span-1 md:col-span-2 space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                            <div className="flex items-center justify-between">
+                                <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                                    <CalendarIcon className="h-4 w-4 text-blue-500" />
+                                    Meses en los que aplica
+                                </FormLabel>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs text-blue-600 hover:text-blue-700 font-medium px-2"
+                                    onClick={() => {
+                                        const current = (form.getValues("meses_aplicacion" as any) as number[]) || [];
+                                        if (current.length === 12) {
+                                            form.setValue("meses_aplicacion" as any, []);
+                                        } else {
+                                            form.setValue("meses_aplicacion" as any, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+                                        }
+                                    }}
+                                >
+                                    {(form.watch("meses_aplicacion" as any) as number[])?.length === 12 ? "Ninguno" : "Todos"}
+                                </Button>
+                            </div>
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                {["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"].map((mes, index) => {
+                                    const monthNum = index + 1;
+                                    const isSelected = (form.watch("meses_aplicacion" as any) as number[])?.includes(monthNum);
+                                    return (
+                                        <Button
+                                            key={mes}
+                                            type="button"
+                                            variant={isSelected ? "default" : "outline"}
+                                            size="sm"
+                                            className={cn(
+                                                "h-9 text-xs font-medium transition-all",
+                                                isSelected
+                                                    ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent shadow-sm"
+                                                    : "bg-white dark:bg-slate-900 hover:border-blue-300"
+                                            )}
+                                            onClick={() => {
+                                                const current = (form.getValues("meses_aplicacion" as any) as number[]) || [];
+                                                const next = current.includes(monthNum)
+                                                    ? current.filter(m => m !== monthNum)
+                                                    : [...current, monthNum].sort((a, b) => a - b);
+                                                form.setValue("meses_aplicacion" as any, next);
+                                            }}
+                                        >
+                                            {mes}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground italic">
+                                * Si es un gasto fijo, se guardará como plantilla para aparecer automáticamente en los meses seleccionados.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <Button

@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction"
 import { CheckCircle2, AlertCircle, TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { deleteTransaction } from "@/app/actions/transaction"
+import { deleteTransaction, excludeRecurringExpense } from "@/app/actions/transaction"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, startOfMonth } from "date-fns"
 
 interface ExpenseTablesProps {
     transactions: Transaccion[]
@@ -86,16 +86,45 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
         }
     }
 
+    const handleExclude = async (recurringId: string) => {
+        if (confirm("¿Quieres omitir este gasto solo para este mes?")) {
+            // Necesitamos la fecha actual del dashboard. Tendremos que pasarla como prop o usar un contexto.
+            // Por ahora asumimos la fecha actual de la UI.
+            const res = await excludeRecurringExpense(recurringId, new Date()); // temporal
+            if (res.error) {
+                toast.error(res.error);
+            } else {
+                toast.success("Gasto omitido para este mes");
+            }
+        }
+    }
+
     // Componente de acciones reutilizable para Filas
-    const TransactionActions = ({ transaction }: { transaction: Transaccion }) => {
+    const TransactionActions = ({ transaction, recurring, currentMonth }: { transaction?: Transaccion; recurring?: GastoRecurrente; currentMonth?: Date }) => {
         const [open, setOpen] = useState(false);
 
-        // Adaptar transaccion a TransactionFormValues
-        // TransactionForm espera { id, descripcion, monto, ... }
-        const initialData = {
-            ...transaction,
-            fecha: new Date(transaction.fecha), // Asegurar date object
-        }
+        // Adaptar transaccion a TransactionFormValues o usar el recurring como base
+        const initialData = transaction
+            ? {
+                ...transaction,
+                monto: Math.abs(transaction.monto),
+                fecha: new Date(transaction.fecha),
+                meses_aplicacion: recurring?.meses_aplicacion // Pass template applicability if available
+            }
+            : recurring
+                ? {
+                    descripcion: recurring.descripcion,
+                    monto: Math.abs(recurring.monto_estimado), // Gastos se muestran en positivo en el form
+                    tipo: 'Gasto fijo' as const,
+                    categoria: recurring.categoria,
+                    fecha: new Date(),
+                    metodo_pago: 'Tarjeta' as const,
+                    es_automatico: false,
+                    meses_aplicacion: recurring.meses_aplicacion,
+                }
+                : undefined;
+
+        if (!initialData) return null;
 
         return (
             <div className="flex items-center justify-end gap-2">
@@ -107,10 +136,13 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px]">
                         <DialogHeader>
-                            <DialogTitle>Editar Transacción</DialogTitle>
-                            <DialogDescription>Modifica los datos de la transacción.</DialogDescription>
+                            <DialogTitle>{transaction ? "Editar Transacción" : "Registrar Pago Fijo"}</DialogTitle>
+                            <DialogDescription>
+                                {transaction
+                                    ? "Modifica los datos de la transacción."
+                                    : "Define los detalles finales para registrar este gasto fijo."}
+                            </DialogDescription>
                         </DialogHeader>
-                        {/* Pasamos key=transaction.updated_at para forzar re-render si cambia, aunque open lo maneja */}
                         <TransactionForm
                             initialData={initialData}
                             onSuccess={() => setOpen(false)}
@@ -118,14 +150,26 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                     </DialogContent>
                 </Dialog>
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => handleDelete(transaction.id)}
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                {transaction ? (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(transaction.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                ) : recurring && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        onClick={() => handleExclude(recurring.id)}
+                        title="Omitir solo este mes"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
         )
     }
@@ -169,13 +213,13 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                 {formatCurrency(Math.abs(item.transaction.monto))}
                                             </span>
                                         ) : (
-                                            <span className="text-muted-foreground italic">
+                                            <span className="text-slate-900 dark:text-slate-100 font-medium">
                                                 ~{formatCurrency(item.definition.monto_estimado)}
                                             </span>
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {item.transaction && <TransactionActions transaction={item.transaction} />}
+                                        <TransactionActions transaction={item.transaction} recurring={item.definition} />
                                     </TableCell>
                                 </TableRow>
                             ))}

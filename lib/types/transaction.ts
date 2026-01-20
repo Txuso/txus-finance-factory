@@ -55,5 +55,6 @@ export interface GastoRecurrente {
     categoria: Categoria;
     dia_cobro_estimado: number;
     activo: boolean;
+    meses_aplicacion?: number[]; // [1, 2, ..., 12]
     created_at?: string;
 }
