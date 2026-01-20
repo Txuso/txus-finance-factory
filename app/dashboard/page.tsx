@@ -1,41 +1,67 @@
+import { Suspense } from "react"
+import { getDashboardData } from "@/lib/data/dashboard"
+import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
 
-export default function DashboardPage() {
+interface DashboardPageProps {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }> // Next.js 15+ async searchParams
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+    const params = await searchParams; // Await params in modern Next.js
+
+    // 1. Resolver fecha seleccionada
+    const now = new Date();
+
+    // Si no hay params, usamos el mes actual
+    let currentDate = now;
+
+    if (params.year && params.month) {
+        const year = parseInt(params.year as string);
+        const month = parseInt(params.month as string); // 0-11 logic depends on how we send it. Let's assume URL sends 1-12
+        if (!isNaN(year) && !isNaN(month)) {
+            // Month in Date constructor is 0-indexed (0=Jan, 11=Dec)
+            // We expect URL to be 1-indexed (1=Jan)
+            currentDate = new Date(year, month - 1, 1);
+        }
+    }
+
+    // 2. Fetch Data (Server Side)
+    const { transactions, recurringExpenses } = await getDashboardData(currentDate);
+
+    // 3. Render
     return (
         <div className="container mx-auto py-10 space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        TxusFinanceFactory
-                    </h1>
-                    <p className="text-muted-foreground text-lg">
-                        Control de finanzas personales.
-                    </p>
-                </div>
+            {/* HEADER & NAV */}
+            <div className="flex flex-col items-center space-y-4">
+                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                    Txus Finance
+                </h1>
+                <MonthSelectorWrapper initialDate={currentDate} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Nueva Transacción - Columna Izquierda (o arriba en móvil) */}
-                <div className="lg:col-span-1">
-                    <Card className="border-none shadow-xl bg-gradient-to-b from-white to-slate-50 dark:from-slate-950 dark:to-slate-900">
+
+                {/* COLUMNA IZQUIERDA: GASTOS (2/3 ancho) */}
+                <div className="lg:col-span-2 space-y-6">
+                    <ExpenseTables
+                        transactions={transactions}
+                        recurringExpenses={recurringExpenses}
+                    />
+                </div>
+
+                {/* COLUMNA DERECHA: FORMULARIO (1/3 ancho) */}
+                <div className="space-y-6">
+                    <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
                         <CardHeader>
-                            <CardTitle className="text-2xl text-primary">Nueva Transacción</CardTitle>
-                            <CardDescription>Registra un nuevo movimiento manual</CardDescription>
+                            <CardTitle>Nueva Transacción</CardTitle>
+                            <CardDescription>Registra un movimiento manual</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <TransactionForm />
                         </CardContent>
-                    </Card>
-                </div>
-
-                {/* Resumen / Lista - Columna Derecha (espacio reservado por ahora) */}
-                <div className="lg:col-span-2 space-y-6">
-                    <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-transparent shadow-none h-64 flex items-center justify-center">
-                        <div className="text-center text-muted-foreground">
-                            <p>Aquí irán los gráficos y el listado de transacciones</p>
-                            <p className="text-sm">(Fase 3 y Lista de Transacciones en progreso)</p>
-                        </div>
                     </Card>
                 </div>
             </div>

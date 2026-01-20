@@ -47,3 +47,13 @@ export interface Transaccion {
     created_at?: string;
     updated_at?: string;
 }
+
+export interface GastoRecurrente {
+    id: string;
+    descripcion: string;
+    monto_estimado: number;
+    categoria: Categoria;
+    dia_cobro_estimado: number;
+    activo: boolean;
+    created_at?: string;
+}
