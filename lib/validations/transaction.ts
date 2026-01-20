@@ -5,8 +5,8 @@ export const transactionSchema = z.object({
     descripcion: z.string().min(2, {
         message: "La descripción debe tener al menos 2 caracteres.",
     }),
-    monto: z.coerce.number().min(0.01, {
-        message: "El monto debe ser mayor a 0.",
+    monto: z.coerce.number().refine(val => Math.abs(val) >= 0.01, {
+        message: "El monto debe ser distinto de 0.",
     }),
     fecha: z.date({
         required_error: "La fecha es requerida.",
