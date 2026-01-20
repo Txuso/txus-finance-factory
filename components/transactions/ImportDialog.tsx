@@ -20,6 +20,8 @@ import { ParsedTransaction } from "@/lib/parsers/pdf-parser"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Categoria, CATEGORIAS } from "@/lib/types/transaction"
 
 export function ImportDialog() {
     const [open, setOpen] = useState(false)
@@ -137,16 +139,47 @@ export function ImportDialog() {
                                         <TableHead></TableHead>
                                     </TableRow>
                                 </TableHeader>
+// Add imports at top (managed by separate edit or implicitly here if I could, but I'll do standard replace)
+
                                 <TableBody>
                                     {transactions.map((t, i) => (
                                         <TableRow key={i}>
                                             <TableCell>{format(new Date(t.fecha), 'dd/MM/yyyy')}</TableCell>
                                             <TableCell className="text-sm">{t.descripcion}</TableCell>
-                                            <TableCell className={t.monto < 0 ? "text-red-500" : "text-green-500"}>
-                                                {t.monto} €
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={t.monto}
+                                                    onChange={(e) => {
+                                                        const newVal = parseFloat(e.target.value);
+                                                        const newTransactions = [...transactions];
+                                                        newTransactions[i].monto = isNaN(newVal) ? 0 : newVal;
+                                                        setTransactions(newTransactions);
+                                                    }}
+                                                    className={`w-32 ${t.monto < 0 ? "text-red-500" : "text-green-500"}`}
+                                                />
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="secondary">{t.categoria}</Badge>
+                                                <Select
+                                                    value={t.categoria}
+                                                    onValueChange={(val: Categoria) => {
+                                                        const newTransactions = [...transactions];
+                                                        newTransactions[i].categoria = val;
+                                                        setTransactions(newTransactions);
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-[180px]">
+                                                        <SelectValue placeholder="Categoría" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {CATEGORIAS.map((cat) => (
+                                                            <SelectItem key={cat} value={cat}>
+                                                                {cat}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </TableCell>
                                             <TableCell>
                                                 <Button variant="ghost" size="icon" onClick={() => removeItem(i)}>

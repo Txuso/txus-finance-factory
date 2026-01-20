@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction"
-import { CheckCircle2, AlertCircle, TrendingDown, Trash2, Pencil } from "lucide-react"
+import { CheckCircle2, AlertCircle, TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { deleteTransaction } from "@/app/actions/transaction"
 import { toast } from "sonner"
@@ -26,6 +26,8 @@ interface ExpenseTablesProps {
 }
 
 export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTablesProps) {
+    const [isVariablesExpanded, setIsVariablesExpanded] = useState(false);
+
     // 1. Identificar Gastos Variables
     const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable');
 
@@ -49,6 +51,25 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
         t.tipo === 'Gasto fijo' &&
         !matchedTransactionIds.includes(t.id)
     );
+
+    // Calucular Totales
+    // Sumamos los valores RAW (negativos = gasto, positivos = ingreso/abono)
+    // Luego invertimos el signo para mostrar el "Gasto Total" como positivo
+    // EXCLUIMOS las inversiones del total de gastos variables
+    const totalVariableRaw = variableExpenses
+        .filter(t => t.categoria !== 'Inversión' && t.tipo !== 'Inversión')
+        .reduce((sum, t) => sum + t.monto, 0);
+    const totalVariable = Math.abs(totalVariableRaw);
+
+    // Para gastos fijos (Total Mes Teórico):
+    // 1. Sumamos SIEMPRE el 'monto_estimado' de los gastos recurrentes (independiente de si se pagaron o no).
+    // 2. Sumamos los gastos extra (reales) que hayan ocurrido.
+    const totalFixed = recurringExpenses.reduce((sum, item) => sum + item.monto_estimado, 0)
+        + extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
+
+    // 3. Ingresos
+    const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
+    const totalIncome = incomeTransactions.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -119,6 +140,9 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                             <TrendingDown className="h-5 w-5 text-blue-500" />
                             Gastos Fijos
                         </span>
+                        <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                            {formatCurrency(totalFixed)}
+                        </span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -127,7 +151,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                             <TableRow>
                                 <TableHead>Concepto</TableHead>
                                 <TableHead>Día Est.</TableHead>
-                                <TableHead className="text-right">Pagado</TableHead>
+                                <TableHead className="text-right">Importe</TableHead>
                                 <TableHead className="w-[100px]"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -139,8 +163,16 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                         <div className="text-xs text-muted-foreground">{item.transaction?.descripcion}</div>
                                     </TableCell>
                                     <TableCell>{item.definition.dia_cobro_estimado}</TableCell>
-                                    <TableCell className="text-right font-bold">
-                                        {item.transaction ? formatCurrency(item.transaction.monto) : '-'}
+                                    <TableCell className="text-right">
+                                        {item.transaction ? (
+                                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                                                {formatCurrency(Math.abs(item.transaction.monto))}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground italic">
+                                                ~{formatCurrency(item.definition.monto_estimado)}
+                                            </span>
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         {item.transaction && <TransactionActions transaction={item.transaction} />}
@@ -153,7 +185,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                 <TableRow key={t.id} className="bg-slate-50/50">
                                     <TableCell className="font-medium text-slate-600">{t.descripcion} (Extra)</TableCell>
                                     <TableCell>-</TableCell>
-                                    <TableCell className="text-right font-bold">{formatCurrency(t.monto)}</TableCell>
+                                    <TableCell className="text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
                                     <TableCell>
                                         <TransactionActions transaction={t} />
                                     </TableCell>
@@ -171,6 +203,9 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-rose-500" />
                             Gastos Variables
+                        </span>
+                        <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                            {formatCurrency(totalVariable)}
                         </span>
                     </CardTitle>
                 </CardHeader>
@@ -193,16 +228,93 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                variableExpenses.map((t) => (
+                                <>
+                                    {(isVariablesExpanded ? variableExpenses : variableExpenses.slice(0, 5)).map((t) => (
+                                        <TableRow key={t.id} className={t.categoria === 'Inversión' ? "bg-blue-50/30" : ""}>
+                                            <TableCell className="text-muted-foreground">
+                                                {format(new Date(t.fecha), 'dd/MM')}
+                                            </TableCell>
+                                            <TableCell className="font-medium">{t.descripcion}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={t.categoria === 'Inversión' ? "border-blue-200 text-blue-700 bg-blue-50" : ""}>
+                                                    {t.categoria}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className={`text-right font-bold ${t.categoria === 'Inversión' ? "text-blue-600" : "text-rose-600"}`}>
+                                                {formatCurrency(Math.abs(t.monto))}
+                                            </TableCell>
+                                            <TableCell>
+                                                <TransactionActions transaction={t} />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {variableExpenses.length > 5 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center p-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsVariablesExpanded(!isVariablesExpanded)}
+                                                    className="w-full text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {isVariablesExpanded ? (
+                                                        <span className="flex items-center gap-2">Ver menos <ChevronUp className="h-4 w-4" /></span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-2">Ver {variableExpenses.length - 5} más <ChevronDown className="h-4 w-4" /></span>
+                                                    )}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card >
+
+            {/* TABLA DE INGRESOS */}
+            < Card className="border-l-4 border-l-emerald-500 shadow-md" >
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                            <TrendingDown className="h-5 w-5 text-emerald-500 rotate-180" />
+                            Ingresos
+                        </span>
+                        <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                            {formatCurrency(totalIncome)}
+                        </span>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[100px]">Fecha</TableHead>
+                                <TableHead>Descripción</TableHead>
+                                <TableHead>Categoría</TableHead>
+                                <TableHead className="text-right">Monto</TableHead>
+                                <TableHead className="w-[100px]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {incomeTransactions.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                                        No hay ingresos este mes.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                incomeTransactions.map((t) => (
                                     <TableRow key={t.id}>
                                         <TableCell className="text-muted-foreground">
                                             {format(new Date(t.fecha), 'dd/MM')}
                                         </TableCell>
                                         <TableCell className="font-medium">{t.descripcion}</TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">{t.categoria}</Badge>
+                                            <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50">{t.categoria}</Badge>
                                         </TableCell>
-                                        <TableCell className="text-right font-bold text-rose-600">
+                                        <TableCell className="text-right font-bold text-emerald-600">
                                             {formatCurrency(Math.abs(t.monto))}
                                         </TableCell>
                                         <TableCell>
@@ -214,7 +326,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         </TableBody>
                     </Table>
                 </CardContent>
-            </Card>
-        </div>
+            </Card >
+        </div >
     )
 }
