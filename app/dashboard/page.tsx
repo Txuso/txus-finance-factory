@@ -10,7 +10,10 @@ import { YearSelector } from "@/components/dashboard/YearSelector"
 import { ImportDialog } from "@/components/transactions/ImportDialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardKPIs } from "@/components/dashboard/DashboardKPIs"
-import { PieChart, TrendingUp, Wallet } from "lucide-react"
+import { PieChart, TrendingUp, Wallet, Settings as SettingsIcon } from "lucide-react"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface DashboardPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -34,7 +37,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
     const yearlyStats = await getYearlyStats(statsYear);
 
-    const { transactions, recurringExpenses } = await getDashboardData(currentDate);
+    const { transactions, recurringExpenses, config } = await getDashboardData(currentDate);
 
     // Cálculos para KPIs (Lógica centralizada en el servidor)
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
@@ -67,6 +70,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         .filter(t => t.categoria === 'Inversión' || t.tipo === 'Inversión')
         .reduce((sum, t) => sum + t.monto, 0));
 
+    // Lógica de objetivo de ahorro
+    const actualSavings = totalIncome - (totalFixed + totalVariable);
+    const savingsPercentage = totalIncome > 0 ? (actualSavings / totalIncome) : 0;
+    const targetPercentage = config?.objetivo_ahorro_porcentaje || 0.20;
+    const isObjectiveMet = savingsPercentage >= targetPercentage;
+    const savingsNeeded = (totalIncome * targetPercentage) - actualSavings;
+
     return (
         <div className="container mx-auto py-10 space-y-8">
             <div className="flex flex-col items-center space-y-4 relative">
@@ -74,11 +84,40 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     Txus Finance Factory
                 </h1>
 
-                <div className="absolute right-0 top-0">
+                <div className="absolute right-0 top-0 flex items-center gap-2">
+                    <Link href="/settings">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                            <SettingsIcon className="h-6 w-6" />
+                        </Button>
+                    </Link>
                     <ImportDialog />
                 </div>
 
                 <MonthSelectorWrapper initialDate={currentDate} />
+
+                {/* Mensaje Motivacional de Objetivo */}
+                <div className={cn(
+                    "w-full max-w-2xl text-center p-4 rounded-3xl border transition-all duration-500 shadow-sm",
+                    isObjectiveMet
+                        ? "bg-emerald-50/50 border-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-300"
+                        : "bg-slate-50/50 border-slate-200 text-slate-600 dark:bg-slate-900/20 dark:border-slate-800"
+                )}>
+                    <p className="text-sm font-medium">
+                        {isObjectiveMet ? (
+                            <>
+                                <span className="font-extrabold text-lg mr-2 italic">¡BRUTAL JOSU! 🚀</span>
+                                Estás ahorrando un <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>.
+                                Objetivo del {(targetPercentage * 100)}% superado.
+                            </>
+                        ) : (
+                            <>
+                                <span className="font-bold mr-2">VAMOS JOSU,</span>
+                                te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para llegar a tu objetivo del {(targetPercentage * 100).toFixed(0)}%.
+                                ¡Tú puedes! 💪
+                            </>
+                        )}
+                    </p>
+                </div>
             </div>
 
             <DashboardKPIs

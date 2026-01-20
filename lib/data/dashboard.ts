@@ -6,6 +6,11 @@ import { Transaccion, GastoRecurrente } from "@/lib/types/transaction";
 export interface DashboardData {
     transactions: Transaccion[];
     recurringExpenses: GastoRecurrente[];
+    config: {
+        id: string;
+        objetivo_ahorro_porcentaje: number;
+        moneda: string;
+    };
 }
 
 export async function getDashboardData(date: Date): Promise<DashboardData> {
@@ -61,9 +66,16 @@ export async function getDashboardData(date: Date): Promise<DashboardData> {
             return matchesMonth && isNotExcluded;
         });
 
+    // 5. Fetch Config
+    const { data: config } = await supabase
+        .from("configuracion")
+        .select("*")
+        .single();
+
     return {
         transactions: (transactions as Transaccion[]) || [],
         recurringExpenses: filteredRecurring,
+        config: config as any
     };
 }
 
