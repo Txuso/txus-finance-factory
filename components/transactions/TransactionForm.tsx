@@ -30,35 +30,65 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { transactionSchema, type TransactionFormValues } from "@/lib/validations/transaction"
-import { createTransaction } from "@/app/actions/transaction"
-import { toast } from "sonner" // We might need to install sonner, or use simple alert for now. Let's install sonner later.
-import { useState } from "react"
+import { createTransaction, updateTransaction } from "@/app/actions/transaction"
+import { toast } from "sonner"
+import { useState, useEffect } from "react"
 import { CATEGORIAS, TIPOS_TRANSACCION, METODOS_PAGO } from "@/lib/types/transaction"
 
-export function TransactionForm() {
+interface TransactionFormProps {
+    initialData?: TransactionFormValues & { id?: string }
+    onSuccess?: () => void
+}
+
+export function TransactionForm({ initialData, onSuccess }: TransactionFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema) as any,
         defaultValues: {
-            descripcion: "",
-            monto: 0,
-            es_automatico: false,
+            descripcion: initialData?.descripcion || "",
+            monto: initialData?.monto || 0,
+            fecha: initialData?.fecha ? new Date(initialData.fecha) : undefined,
+            categoria: initialData?.categoria,
+            tipo: initialData?.tipo,
+            metodo_pago: initialData?.metodo_pago,
+            es_automatico: initialData?.es_automatico || false,
         },
     })
+
+    // Reset form when initialData changes (important for dialogs)
+    useEffect(() => {
+        if (initialData) {
+            form.reset({
+                ...initialData,
+                fecha: initialData.fecha ? new Date(initialData.fecha) : undefined
+            })
+        }
+    }, [initialData, form])
 
     async function onSubmit(data: TransactionFormValues) {
         setIsSubmitting(true)
         try {
-            const result = await createTransaction(data)
-            if (result.error) {
-                alert(result.error) // Replace with toast later
+            let result;
+            if (initialData?.id) {
+                result = await updateTransaction(initialData.id, data)
             } else {
-                alert("Transacción guardada correctamente") // Replace with toast later
-                form.reset()
+                result = await createTransaction(data)
+            }
+
+            if (result.error) {
+                toast.error(result.error)
+            } else {
+                toast.success(initialData?.id ? "Transacción actualizada" : "Transacción creada")
+                if (!initialData?.id) {
+                    form.reset()
+                }
+                if (onSuccess) {
+                    onSuccess()
+                }
             }
         } catch (error) {
-            alert("Ocurrió un error inesperado")
+            toast.error("Ocurrió un error inesperado")
         } finally {
             setIsSubmitting(false)
         }

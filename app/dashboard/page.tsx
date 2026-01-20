@@ -5,40 +5,39 @@ import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
 
+import { ImportDialog } from "@/components/transactions/ImportDialog"
+
 interface DashboardPageProps {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }> // Next.js 15+ async searchParams
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-    const params = await searchParams; // Await params in modern Next.js
+    const params = await searchParams;
 
-    // 1. Resolver fecha seleccionada
     const now = new Date();
-
-    // Si no hay params, usamos el mes actual
     let currentDate = now;
 
     if (params.year && params.month) {
         const year = parseInt(params.year as string);
-        const month = parseInt(params.month as string); // 0-11 logic depends on how we send it. Let's assume URL sends 1-12
+        const month = parseInt(params.month as string);
         if (!isNaN(year) && !isNaN(month)) {
-            // Month in Date constructor is 0-indexed (0=Jan, 11=Dec)
-            // We expect URL to be 1-indexed (1=Jan)
             currentDate = new Date(year, month - 1, 1);
         }
     }
 
-    // 2. Fetch Data (Server Side)
     const { transactions, recurringExpenses } = await getDashboardData(currentDate);
 
-    // 3. Render
     return (
         <div className="container mx-auto py-10 space-y-8">
-            {/* HEADER & NAV */}
-            <div className="flex flex-col items-center space-y-4">
+            <div className="flex flex-col items-center space-y-4 relative">
                 <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                     Txus Finance
                 </h1>
+
+                <div className="absolute right-0 top-0">
+                    <ImportDialog />
+                </div>
+
                 <MonthSelectorWrapper initialDate={currentDate} />
             </div>
 

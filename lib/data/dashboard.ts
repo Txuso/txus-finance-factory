@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction";
 
 export interface DashboardData {
@@ -8,8 +8,9 @@ export interface DashboardData {
 }
 
 export async function getDashboardData(date: Date): Promise<DashboardData> {
-    const start = startOfMonth(date).toISOString();
-    const end = endOfMonth(date).toISOString();
+    // USE LOCAL DATE STRINGS for 'DATE' column queries to avoid UTC shifts
+    const start = format(startOfMonth(date), 'yyyy-MM-dd');
+    const end = format(endOfMonth(date), 'yyyy-MM-dd');
 
     // 1. Fetch Transactions for the month
     const { data: transactions, error: transError } = await supabase
