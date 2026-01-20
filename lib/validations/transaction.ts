@@ -3,8 +3,9 @@ import { CATEGORIAS, TIPOS_TRANSACCION, METODOS_PAGO } from "@/lib/types/transac
 
 export const transactionSchema = z.object({
     descripcion: z.string().min(2, {
-        message: "La descripción debe tener al menos 2 caracteres.",
+        message: "El título debe tener al menos 2 caracteres.",
     }),
+    notas: z.string().optional(),
     monto: z.coerce.number().refine(val => Math.abs(val) >= 0.01, {
         message: "El monto debe ser distinto de 0.",
     }),

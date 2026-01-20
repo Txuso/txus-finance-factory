@@ -194,7 +194,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Concepto</TableHead>
-                                <TableHead>Día Est.</TableHead>
+                                <TableHead>Descripción</TableHead>
                                 <TableHead className="text-right">Importe</TableHead>
                                 <TableHead className="w-[100px]"></TableHead>
                             </TableRow>
@@ -202,11 +202,12 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         <TableBody>
                             {fixedExpensesList.map((item) => (
                                 <TableRow key={item.definition.id}>
-                                    <TableCell className="font-medium">
-                                        <div>{item.definition.descripcion}</div>
-                                        <div className="text-xs text-muted-foreground">{item.transaction?.descripcion}</div>
+                                    <TableCell className="font-medium text-slate-700 dark:text-slate-200">
+                                        {item.definition.descripcion}
                                     </TableCell>
-                                    <TableCell>{item.definition.dia_cobro_estimado}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground italic">
+                                        {item.transaction?.descripcion || "-"}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         {item.transaction ? (
                                             <span className="font-bold text-slate-900 dark:text-slate-100">
@@ -214,7 +215,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                             </span>
                                         ) : (
                                             <span className="text-slate-900 dark:text-slate-100 font-medium">
-                                                ~{formatCurrency(item.definition.monto_estimado)}
+                                                {formatCurrency(item.definition.monto_estimado)}
                                             </span>
                                         )}
                                     </TableCell>
@@ -227,8 +228,8 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                             {/* Gastos Fijos Extra */}
                             {extraFixedExpenses.map((t) => (
                                 <TableRow key={t.id} className="bg-slate-50/50">
-                                    <TableCell className="font-medium text-slate-600">{t.descripcion} (Extra)</TableCell>
-                                    <TableCell>-</TableCell>
+                                    <TableCell className="font-medium text-slate-600 italic">{t.descripcion}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
                                     <TableCell className="text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
                                     <TableCell>
                                         <TransactionActions transaction={t} />

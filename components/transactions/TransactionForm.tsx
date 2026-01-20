@@ -29,6 +29,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { transactionSchema, type TransactionFormValues } from "@/lib/validations/transaction"
 import { createTransaction, updateTransaction } from "@/app/actions/transaction"
 import { toast } from "sonner"
@@ -47,6 +48,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         resolver: zodResolver(transactionSchema) as any,
         defaultValues: {
             descripcion: initialData?.descripcion || "",
+            notas: initialData?.notas || "",
             monto: initialData?.monto || 0,
             fecha: initialData?.fecha ? new Date(initialData.fecha) : undefined,
             categoria: initialData?.categoria,
@@ -106,13 +108,13 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Descripción */}
+                    {/* Descripción -> Título */}
                     <FormField
                         control={form.control}
                         name="descripcion"
                         render={({ field }) => (
                             <FormItem className="col-span-1 md:col-span-2">
-                                <FormLabel>Descripción</FormLabel>
+                                <FormLabel>Título</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Ej: Compra mensual Mercadona" {...field} className="bg-background/50 backdrop-blur-sm focus:border-primary/50 transition-all" />
                                 </FormControl>
@@ -265,6 +267,27 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                             </FormItem>
                         )}
                     />
+
+                    {/* Notas (Descripción textarea) - Solo para Gasto Fijo */}
+                    {form.watch("tipo" as any) === "Gasto fijo" && (
+                        <FormField
+                            control={form.control}
+                            name="notas"
+                            render={({ field }) => (
+                                <FormItem className="col-span-1 md:col-span-2">
+                                    <FormLabel>Descripción</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="Añade más detalles sobre este gasto variable..."
+                                            className="bg-background/50 backdrop-blur-sm focus:border-primary/50 transition-all min-h-[100px]"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
                     {/* Selector de Meses (Solo para Gasto fijo) */}
                     {form.watch("tipo" as any) === "Gasto fijo" && (
                         <div className="col-span-1 md:col-span-2 space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">

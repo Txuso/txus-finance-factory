@@ -39,6 +39,7 @@ export interface Transaccion {
     id: string;
     fecha: string;
     descripcion: string;
+    notas?: string; // Additional detailed description
     monto: number;
     categoria: Categoria;
     tipo: TipoTransaccion;
