@@ -7,14 +7,16 @@ import { formatCurrency } from "@/lib/utils"
 
 interface MonthlyComparisonChartProps {
     data: MonthlyStat[]
+    title?: string
+    description?: string
 }
 
-export function MonthlyComparisonChart({ data }: MonthlyComparisonChartProps) {
+export function MonthlyComparisonChart({ data, title = "Comparativa Mensual", description }: MonthlyComparisonChartProps) {
     return (
         <Card className="border-0 shadow-md bg-white dark:bg-slate-900 overflow-hidden">
             <CardHeader>
-                <CardTitle className="text-lg font-bold">Comparativa Mensual</CardTitle>
-                <CardDescription>Ingresos vs Gastos vs Inversiones (Últimos 6 meses)</CardDescription>
+                <CardTitle className="text-lg font-bold">{title}</CardTitle>
+                {description && <CardDescription>{description}</CardDescription>}
             </CardHeader>
             <CardContent className="pt-4">
                 <div className="h-[350px] w-full">

@@ -42,7 +42,7 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                             size="sm"
                             onClick={() => onMonthChange(date)}
                             className={cn(
-                                "h-11 px-3 rounded-full transition-all duration-300 flex flex-col items-center justify-center gap-0 relative shrink-0",
+                                "h-11 px-3 rounded-full transition-all duration-300 flex flex-col items-center justify-center gap-0 relative shrink-0 cursor-pointer hover:scale-110",
                                 isSelected
                                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:from-blue-700 hover:to-indigo-700 min-w-[110px] z-10"
                                     : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-white/50 dark:hover:bg-slate-800/50 min-w-[75px]",

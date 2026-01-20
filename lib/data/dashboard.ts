@@ -103,7 +103,46 @@ export async function getMonthlyStats(endDate: Date): Promise<MonthlyStat[]> {
                 .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
             stats.push({
-                month: format(date, 'MMM yy', { locale: es as any }), // Needs es locale
+                month: format(date, 'MMM yy', { locale: es as any }),
+                income,
+                expenses,
+                investments
+            });
+        }
+    }
+
+    return stats;
+}
+
+export async function getYearlyStats(year: number): Promise<MonthlyStat[]> {
+    const stats: MonthlyStat[] = [];
+
+    for (let month = 0; month < 12; month++) {
+        const date = new Date(year, month, 1);
+        const start = format(startOfMonth(date), 'yyyy-MM-dd');
+        const end = format(endOfMonth(date), 'yyyy-MM-dd');
+
+        const { data: transactions } = await supabase
+            .from("transacciones")
+            .select("monto, tipo, categoria")
+            .gte("fecha", start)
+            .lte("fecha", end);
+
+        if (transactions) {
+            const income = transactions
+                .filter(t => t.tipo === 'Ingreso')
+                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+
+            const investments = transactions
+                .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
+                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+
+            const expenses = transactions
+                .filter(t => t.tipo !== 'Ingreso' && t.tipo !== 'Inversión' && t.categoria !== 'Inversión')
+                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+
+            stats.push({
+                month: format(date, 'MMM', { locale: es as any }),
                 income,
                 expenses,
                 investments

@@ -1,10 +1,11 @@
 import { Suspense } from "react"
-import { getDashboardData, getMonthlyStats } from "@/lib/data/dashboard"
+import { getDashboardData, getYearlyStats } from "@/lib/data/dashboard"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
 import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
+import { YearSelector } from "@/components/dashboard/YearSelector"
 
 import { ImportDialog } from "@/components/transactions/ImportDialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -29,8 +30,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         }
     }
 
+    // Estadísticas independientes
+    const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
+    const yearlyStats = await getYearlyStats(statsYear);
+
     const { transactions, recurringExpenses } = await getDashboardData(currentDate);
-    const monthlyStats = await getMonthlyStats(currentDate);
 
     // Cálculos para KPIs (Lógica centralizada en el servidor)
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
@@ -67,7 +71,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <div className="container mx-auto py-10 space-y-8">
             <div className="flex flex-col items-center space-y-4 relative">
                 <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                    Txus Finance
+                    Txus Finance Factory
                 </h1>
 
                 <div className="absolute right-0 top-0">
@@ -130,7 +134,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                 <TabsContent value="stats" className="mt-0">
                     <div className="grid grid-cols-1 gap-8">
-                        <MonthlyComparisonChart data={monthlyStats} />
+                        <div className="space-y-6">
+                            <YearSelector currentYear={statsYear} />
+                            <MonthlyComparisonChart
+                                data={yearlyStats}
+                                title={`Resumen Anual ${statsYear}`}
+                                description={`Comparativa mensual de ingresos, gastos e inversiones durante el año ${statsYear}`}
+                            />
+                        </div>
 
                         <Card className="p-12 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-2 bg-slate-50/50">
                             <div className="p-4 bg-white dark:bg-slate-800 rounded-full shadow-sm">
