@@ -31,8 +31,12 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
             <Card className="w-full max-w-md border-0 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
                 <CardHeader className="space-y-4 text-center">
-                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-2">
-                        <span className="text-3xl">🚀</span>
+                    <div className="mx-auto w-24 h-24 flex items-center justify-center mb-2">
+                        <img
+                            src="/logo.png"
+                            alt="Txus Finance Factory Logo"
+                            className="w-full h-full object-contain filter drop-shadow-xl"
+                        />
                     </div>
                     <div>
                         <CardTitle className="text-3xl font-black bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">

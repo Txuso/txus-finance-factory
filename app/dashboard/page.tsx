@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { getDashboardData, getYearlyStats, getCategoryStats } from "@/lib/data/dashboard"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
-import { TransactionForm } from "@/components/transactions/TransactionForm"
+import { AddTransactionFAB } from "@/components/transactions/AddTransactionFAB"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
 import { YearSelector } from "@/components/dashboard/YearSelector"
@@ -83,11 +83,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     return (
         <div className="container mx-auto py-10 space-y-8">
             <div className="flex flex-col items-center space-y-4 relative px-4 text-center">
-                <div className="flex items-center justify-between w-full sm:justify-center relative">
+                <div className="flex items-center justify-between w-full sm:justify-center relative gap-2 sm:gap-4">
                     <div className="sm:hidden w-10" />
-                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                        Txus Finance Factory
-                    </h1>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <img
+                            src="/logo.png"
+                            alt="Logo"
+                            className="w-10 h-10 sm:w-14 sm:h-14 object-contain filter drop-shadow-md"
+                        />
+                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent italic">
+                            Txus Finance Factory
+                        </h1>
+                    </div>
 
                     <div className="flex items-center gap-1 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
                         <Link href="/settings">
@@ -161,25 +168,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                 <TabsContent value="summary" className="mt-0">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* COLUMNA IZQUIERDA: GASTOS (2/3 ancho) */}
-                        <div className="lg:col-span-2 space-y-6">
+                        {/* TABLAS DE GASTOS (Ancho completo) */}
+                        <div className="lg:col-span-3 space-y-6">
                             <ExpenseTables
                                 transactions={transactions}
                                 recurringExpenses={recurringExpenses}
                             />
-                        </div>
-
-                        {/* COLUMNA DERECHA: FORMULARIO (1/3 ancho) */}
-                        <div className="space-y-6">
-                            <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 sticky top-10">
-                                <CardHeader>
-                                    <CardTitle>Nueva Transacción</CardTitle>
-                                    <CardDescription>Registra un movimiento manual</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <TransactionForm />
-                                </CardContent>
-                            </Card>
                         </div>
                     </div>
                 </TabsContent>
@@ -213,6 +207,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     </div>
                 </TabsContent>
             </Tabs>
+            <AddTransactionFAB />
         </div>
     )
 }

@@ -50,10 +50,10 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             descripcion: initialData?.descripcion || "",
             notas: initialData?.notas || "",
             monto: initialData?.monto || 0,
-            fecha: initialData?.fecha ? new Date(initialData.fecha) : undefined,
-            categoria: initialData?.categoria,
-            tipo: initialData?.tipo,
-            metodo_pago: initialData?.metodo_pago,
+            fecha: initialData?.fecha ? new Date(initialData.fecha) : new Date(),
+            categoria: initialData?.categoria || CATEGORIAS[0],
+            tipo: initialData?.tipo || 'Gasto variable',
+            metodo_pago: initialData?.metodo_pago || METODOS_PAGO[0],
             es_automatico: initialData?.es_automatico || false,
             meses_aplicacion: (initialData as any)?.meses_aplicacion || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         },
@@ -304,9 +304,10 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                                     <FormLabel>Descripción</FormLabel>
                                     <FormControl>
                                         <Textarea
-                                            placeholder="Añade más detalles sobre este gasto variable..."
+                                            placeholder="Detalles adicionales sobre este movimiento..."
                                             className="bg-background/50 backdrop-blur-sm focus:border-primary/50 transition-all min-h-[100px]"
                                             {...field}
+                                            value={field.value || ""}
                                         />
                                     </FormControl>
                                     <FormMessage />
