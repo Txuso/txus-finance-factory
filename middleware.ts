@@ -1,28 +1,19 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
 
-export function middleware(request: NextRequest) {
-    // Solo aplicar en rutas protegidas si es necesario
-    // Por ahora verificamos dashboard y transactions
-    if (request.nextUrl.pathname.startsWith('/dashboard') ||
-        request.nextUrl.pathname.startsWith('/transactions')) {
-
-        // En una implementación real usaríamos supabase auth,
-        // pero según requisitos v1.0 usaremos una validación simple o la cookie de supabase más adelante.
-        // El requisito decía "Validación simple por email".
-        // Como no tenemos login form aún, vamos a dejar pasar por ahora 
-        // O implementar la lógica de verificar una cookie personalizada si existe.
-
-        // TODO: Implementar lógica de auth real cuando tengamos la pantalla de login.
-        // const userEmail = request.cookies.get('user_email')?.value;
-        // if (userEmail !== process.env.ALLOWED_EMAIL) {
-        //   return NextResponse.redirect(new URL('/login', request.url));
-        // }
-    }
-
-    return NextResponse.next();
+export async function middleware(request: NextRequest) {
+    return await updateSession(request)
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/transactions/:path*', '/settings/:path*'],
-};
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * Feel free to modify this pattern to include more paths.
+         */
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    ],
+}

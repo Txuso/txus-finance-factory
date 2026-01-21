@@ -3,8 +3,16 @@
 import { parseBankStatement, ParsedTransaction } from "@/lib/parsers/pdf-parser";
 import { revalidatePath } from "next/cache";
 import { startOfMonth } from "date-fns";
+import { createClient } from "@/lib/supabase/server";
 
 export async function parseUpload(formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: "No autorizado" };
+    }
+
     const file = formData.get("file") as File;
 
     if (!file) {
@@ -26,12 +34,10 @@ export async function parseUpload(formData: FormData) {
         }
 
         // Deduplicate logic
-        // 1. Get range of months from the parsed PDF
         const dates = allParsed.map(t => new Date(t.fecha));
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
         const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
 
-        // Start of month for the range
         const start = startOfMonth(minDate).toISOString();
         const end = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0).toISOString();
 
@@ -39,6 +45,7 @@ export async function parseUpload(formData: FormData) {
         const { data: existingTransactions } = await supabase
             .from('transacciones')
             .select('descripcion, fecha, monto, tipo')
+            .eq('user_id', user.id)
             .gte('fecha', start)
             .lte('fecha', end);
 
@@ -46,6 +53,7 @@ export async function parseUpload(formData: FormData) {
         const { data: recurringList } = await supabase
             .from('gastos_recurrentes')
             .select('*')
+            .eq('user_id', user.id)
             .eq('activo', true);
 
         const transactions: ParsedTransaction[] = [];
@@ -54,7 +62,6 @@ export async function parseUpload(formData: FormData) {
         for (const t of allParsed) {
             let processed = t;
 
-            // Apply templates if matches
             if (recurringList && recurringList.length > 0) {
                 const matchTemplate = recurringList.find(r =>
                     t.descripcion.toUpperCase().includes(r.descripcion.toUpperCase())
@@ -69,25 +76,18 @@ export async function parseUpload(formData: FormData) {
                 }
             }
 
-            // DUPLICATE CHECK (Only for Fixed Expenses as requested)
             if (processed.tipo === 'Gasto fijo' && existingTransactions) {
                 const isDuplicate = existingTransactions.some(existing => {
-                    // Normalize descriptions for comparison
                     const descNorm = processed.descripcion.toUpperCase();
                     const existNorm = existing.descripcion.toUpperCase();
-
-                    // Same month and similar description
                     const sameMonth = startOfMonth(new Date(processed.fecha)).getTime() === startOfMonth(new Date(existing.fecha)).getTime();
-
-                    // Check if one contains the other (simple similarity)
                     const similarDesc = descNorm.includes(existNorm) || existNorm.includes(descNorm);
-
                     return sameMonth && similarDesc;
                 });
 
                 if (isDuplicate) {
                     duplicates.push(processed);
-                    continue; // Skip adding to main list
+                    continue;
                 }
             }
 
@@ -101,23 +101,25 @@ export async function parseUpload(formData: FormData) {
     }
 }
 
-// Bulk insert action
-import { supabase } from "@/lib/supabase/client";
-import { redirect } from "next/navigation";
-
 export async function saveImportedTransactions(transactions: ParsedTransaction[]) {
-    // 1. Transform formatting for DB
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: "No autorizado" };
+    }
+
     const dbTransactions = transactions.map(t => ({
+        user_id: user.id,
         descripcion: t.descripcion,
         monto: t.monto,
         categoria: t.categoria,
         tipo: t.tipo,
-        metodo_pago: 'Tarjeta' as const, // Default for Bank Import
+        metodo_pago: 'Tarjeta' as const,
         es_automatico: false,
         fecha: new Date(t.fecha).toISOString()
     }));
 
-    // 2. Insert transactions
     const { error: insertError } = await supabase
         .from('transacciones')
         .insert(dbTransactions);
@@ -127,22 +129,22 @@ export async function saveImportedTransactions(transactions: ParsedTransaction[]
         return { error: "Error al guardar las transacciones" };
     }
 
-    // 3. Sync Fixed Expenses with gastos_recurrentes
     const fixedExpenses = transactions.filter(t => t.tipo === 'Gasto fijo');
 
     for (const fe of fixedExpenses) {
-        // Check if recurring already exists
         const { data: existing } = await supabase
             .from('gastos_recurrentes')
             .select('id')
+            .eq('user_id', user.id)
             .eq('descripcion', fe.descripcion)
             .maybeSingle();
 
         const recurringData = {
+            user_id: user.id,
             descripcion: fe.descripcion,
             monto_estimado: Math.abs(fe.monto),
             categoria: fe.categoria,
-            meses_aplicacion: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // Default for imported
+            meses_aplicacion: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
             dia_cobro_estimado: new Date(fe.fecha).getDate(),
             activo: true
         };
@@ -151,7 +153,8 @@ export async function saveImportedTransactions(transactions: ParsedTransaction[]
             await supabase
                 .from('gastos_recurrentes')
                 .update(recurringData)
-                .eq('id', existing.id);
+                .eq('id', existing.id)
+                .eq('user_id', user.id);
         } else {
             await supabase
                 .from('gastos_recurrentes')

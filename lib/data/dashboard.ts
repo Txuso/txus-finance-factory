@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction";
@@ -14,6 +14,11 @@ export interface DashboardData {
 }
 
 export async function getDashboardData(date: Date): Promise<DashboardData> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("No user found");
+
     // USE LOCAL DATE STRINGS for 'DATE' column queries to avoid UTC shifts
     const start = format(startOfMonth(date), 'yyyy-MM-dd');
     const end = format(endOfMonth(date), 'yyyy-MM-dd');
@@ -22,6 +27,7 @@ export async function getDashboardData(date: Date): Promise<DashboardData> {
     const { data: transactions, error: transError } = await supabase
         .from("transacciones")
         .select("*")
+        .eq("user_id", user.id)
         .gte("fecha", start)
         .lte("fecha", end)
         .order("fecha", { ascending: false });
@@ -35,6 +41,7 @@ export async function getDashboardData(date: Date): Promise<DashboardData> {
     let { data: recurring, error: recError } = await supabase
         .from("gastos_recurrentes")
         .select("*")
+        .eq("user_id", user.id)
         .eq("activo", true)
         .order("dia_cobro_estimado", { ascending: true });
 
@@ -47,6 +54,7 @@ export async function getDashboardData(date: Date): Promise<DashboardData> {
     const { data: exclusions } = await supabase
         .from("exclusiones_fijos")
         .select("gasto_recurrente_id")
+        .eq("user_id", user.id)
         .eq("mes", start);
 
     const excludedIds = exclusions?.map(e => e.gasto_recurrente_id) || [];
@@ -70,6 +78,7 @@ export async function getDashboardData(date: Date): Promise<DashboardData> {
     const { data: config } = await supabase
         .from("configuracion")
         .select("*")
+        .eq("user_id", user.id)
         .single();
 
     return {
@@ -92,6 +101,10 @@ export interface CategoryStat {
 }
 
 export async function getMonthlyStats(endDate: Date): Promise<MonthlyStat[]> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const stats: MonthlyStat[] = [];
 
     // Fetch last 6 months
@@ -103,6 +116,7 @@ export async function getMonthlyStats(endDate: Date): Promise<MonthlyStat[]> {
         const { data: transactions } = await supabase
             .from("transacciones")
             .select("monto, tipo, categoria")
+            .eq("user_id", user.id)
             .gte("fecha", start)
             .lte("fecha", end);
 
@@ -132,6 +146,10 @@ export async function getMonthlyStats(endDate: Date): Promise<MonthlyStat[]> {
 }
 
 export async function getYearlyStats(year: number): Promise<MonthlyStat[]> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const stats: MonthlyStat[] = [];
 
     for (let month = 0; month < 12; month++) {
@@ -142,6 +160,7 @@ export async function getYearlyStats(year: number): Promise<MonthlyStat[]> {
         const { data: transactions } = await supabase
             .from("transacciones")
             .select("monto, tipo, categoria")
+            .eq("user_id", user.id)
             .gte("fecha", start)
             .lte("fecha", end);
 
@@ -171,9 +190,14 @@ export async function getYearlyStats(year: number): Promise<MonthlyStat[]> {
 }
 
 export async function getCategoryStats(year: number, month?: number): Promise<CategoryStat[]> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     let query = supabase
         .from("transacciones")
-        .select("monto, categoria, tipo");
+        .select("monto, categoria, tipo")
+        .eq("user_id", user.id);
 
     if (month !== undefined) {
         const date = new Date(year, month - 1, 1);

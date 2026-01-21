@@ -1,15 +1,18 @@
 "use server"
 
-// Using the singleton supabase client for now
-
-
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/server"
 import { transactionSchema, type TransactionFormValues } from "@/lib/validations/transaction"
 import { revalidatePath } from "next/cache"
 import { format, startOfMonth } from "date-fns"
-import { redirect } from "next/navigation"
 
 export async function createTransaction(data: TransactionFormValues) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: "No autorizado" }
+    }
+
     const validatedFields = transactionSchema.safeParse(data)
 
     if (!validatedFields.success) {
@@ -18,13 +21,13 @@ export async function createTransaction(data: TransactionFormValues) {
 
     // If it's a "Gasto fijo", we also want to ensure it exists in gastos_recurrentes
     if (validatedFields.data.tipo === 'Gasto fijo') {
-        // We create or update the recurring definition
         const { meses_aplicacion, ...baseData } = validatedFields.data;
 
         // 1. Check if it already exists in recurrentes (by description match)
         const { data: existing } = await supabase
             .from("gastos_recurrentes")
             .select("id")
+            .eq("user_id", user.id)
             .eq("descripcion", baseData.descripcion)
             .maybeSingle();
 
@@ -37,11 +40,13 @@ export async function createTransaction(data: TransactionFormValues) {
                     meses_aplicacion: meses_aplicacion,
                     dia_cobro_estimado: new Date(baseData.fecha).getDate()
                 })
-                .eq("id", existing.id);
+                .eq("id", existing.id)
+                .eq("user_id", user.id);
         } else {
             await supabase
                 .from("gastos_recurrentes")
                 .insert([{
+                    user_id: user.id,
                     descripcion: baseData.descripcion,
                     monto_estimado: Math.abs(baseData.monto),
                     categoria: baseData.categoria,
@@ -59,7 +64,8 @@ export async function createTransaction(data: TransactionFormValues) {
         .insert([
             {
                 ...transactionData,
-                fecha: transactionData.fecha.toISOString(), // Convert Date to string for DB
+                user_id: user.id,
+                fecha: transactionData.fecha.toISOString(),
             },
         ])
 
@@ -74,6 +80,13 @@ export async function createTransaction(data: TransactionFormValues) {
 }
 
 export async function updateTransaction(id: string, data: TransactionFormValues) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: "No autorizado" }
+    }
+
     const validatedFields = transactionSchema.safeParse(data)
 
     if (!validatedFields.success) {
@@ -87,6 +100,7 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
         const { data: existing } = await supabase
             .from("gastos_recurrentes")
             .select("id")
+            .eq("user_id", user.id)
             .eq("descripcion", baseData.descripcion)
             .maybeSingle();
 
@@ -99,7 +113,8 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
                     meses_aplicacion: meses_aplicacion,
                     dia_cobro_estimado: new Date(baseData.fecha).getDate()
                 })
-                .eq("id", existing.id);
+                .eq("id", existing.id)
+                .eq("user_id", user.id);
         }
     }
 
@@ -112,6 +127,7 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
             fecha: transactionData.fecha.toISOString(),
         })
         .eq("id", id)
+        .eq("user_id", user.id)
 
     if (error) {
         console.error("Error updating transaction:", error)
@@ -124,10 +140,16 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
 }
 
 export async function deleteTransaction(id: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
     const { error } = await supabase
         .from("transacciones")
         .delete()
         .eq("id", id)
+        .eq("user_id", user.id)
 
     if (error) {
         console.error("Error deleting transaction:", error)
@@ -139,9 +161,15 @@ export async function deleteTransaction(id: string) {
 }
 
 export async function deleteAllTransactions() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
     const { error } = await supabase
         .from("transacciones")
         .delete()
+        .eq("user_id", user.id)
         .neq("id", "00000000-0000-0000-0000-000000000000")
 
     if (error) {
@@ -154,11 +182,20 @@ export async function deleteAllTransactions() {
 }
 
 export async function excludeRecurringExpense(recurringId: string, monthDate: Date) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
     const start = format(startOfMonth(monthDate), 'yyyy-MM-dd');
 
     const { error } = await supabase
         .from("exclusiones_fijos")
-        .insert([{ gasto_recurrente_id: recurringId, mes: start }]);
+        .insert([{
+            user_id: user.id,
+            gasto_recurrente_id: recurringId,
+            mes: start
+        }]);
 
     if (error) {
         console.error("Error excluding expense:", error);

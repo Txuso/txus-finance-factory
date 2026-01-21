@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { getConfig, updateConfig } from "@/app/actions/config"
+import { signOut } from "@/app/actions/auth"
 import { toast } from "sonner"
-import { Settings, Save, Wallet, Target, ArrowLeft } from "lucide-react"
+import { Settings, Save, Wallet, Target, ArrowLeft, LogOut } from "lucide-react"
 import Link from "next/link"
 
 export default function SettingsPage() {
@@ -131,11 +132,21 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-10 border-t border-slate-200 dark:border-slate-800">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => signOut()}
+                        className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold gap-2"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Cerrar sesión
+                    </Button>
+
                     <Button
                         type="submit"
                         disabled={saving}
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transform transition-all hover:-translate-y-0.5"
+                        className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transform transition-all hover:-translate-y-0.5"
                     >
                         {saving ? "Guardando..." : (
                             <>

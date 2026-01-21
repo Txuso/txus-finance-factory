@@ -1,17 +1,44 @@
 "use server"
 
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function getConfig() {
-    const { data, error } = await supabase
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: "No autorizado" }
+    }
+
+    let { data, error } = await supabase
         .from("configuracion")
         .select("*")
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
     if (error) {
         console.error("Error fetching config:", error);
         return { error: "No se pudo cargar la configuración" };
+    }
+
+    // If no config exists for this user, create a default one
+    if (!data) {
+        const { data: newConfig, error: insertError } = await supabase
+            .from("configuracion")
+            .insert([{
+                user_id: user.id,
+                objetivo_ahorro_porcentaje: 0.20,
+                moneda: '€'
+            }])
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error("Error creating default config:", insertError);
+            return { error: "Error al inicializar la configuración" };
+        }
+        data = newConfig;
     }
 
     return { data };
@@ -21,6 +48,13 @@ export async function updateConfig(data: {
     objetivo_ahorro_porcentaje?: number;
     moneda?: string;
 }) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: "No autorizado" }
+    }
+
     // Basic validation
     if (data.objetivo_ahorro_porcentaje !== undefined) {
         if (data.objetivo_ahorro_porcentaje < 0 || data.objetivo_ahorro_porcentaje > 1) {
@@ -34,7 +68,7 @@ export async function updateConfig(data: {
             ...data,
             updated_at: new Date().toISOString()
         })
-        .match({ id: (await getConfig()).data?.id });
+        .eq("user_id", user.id);
 
     if (error) {
         console.error("Error updating config:", error);
