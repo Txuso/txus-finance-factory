@@ -13,6 +13,8 @@ import { DashboardKPIs } from "@/components/dashboard/DashboardKPIs"
 import { PieChart, TrendingUp, Wallet, Settings as SettingsIcon } from "lucide-react"
 import Link from "next/link"
 import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart"
+import { SavingsGoalProgress } from "@/components/dashboard/SavingsGoalProgress"
+import { SavingsGrowthChart } from "@/components/dashboard/SavingsGrowthChart"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -80,10 +82,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
     return (
         <div className="container mx-auto py-10 space-y-8">
-            <div className="flex flex-col items-center space-y-4 relative px-4">
+            <div className="flex flex-col items-center space-y-4 relative px-4 text-center">
                 <div className="flex items-center justify-between w-full sm:justify-center relative">
-                    <div className="sm:hidden w-10" /> {/* Spacer to help center title on mobile if buttons are on right */}
-                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent text-center">
+                    <div className="sm:hidden w-10" />
+                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                         Txus Finance Factory
                     </h1>
 
@@ -99,28 +101,35 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                 <MonthSelectorWrapper initialDate={currentDate} />
 
-                {/* Mensaje Motivacional de Objetivo */}
-                <div className={cn(
-                    "w-full max-w-2xl text-center p-4 rounded-3xl border transition-all duration-500 shadow-sm",
-                    isObjectiveMet
-                        ? "bg-emerald-50/50 border-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-300"
-                        : "bg-slate-50/50 border-slate-200 text-slate-600 dark:bg-slate-900/20 dark:border-slate-800"
-                )}>
-                    <p className="text-sm font-medium">
-                        {isObjectiveMet ? (
-                            <>
-                                <span className="font-extrabold text-lg mr-2 italic">¡BRUTAL JOSU! 🚀</span>
-                                Estás ahorrando un <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>.
-                                Objetivo del {(targetPercentage * 100)}% superado.
-                            </>
-                        ) : (
-                            <>
-                                <span className="font-bold mr-2">VAMOS JOSU,</span>
-                                te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para llegar a tu objetivo del {(targetPercentage * 100).toFixed(0)}%.
-                                ¡Tú puedes! 💪
-                            </>
-                        )}
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-4">
+                    {/* Mensaje Motivacional de Objetivo */}
+                    <div className={cn(
+                        "flex items-center justify-center p-6 rounded-3xl border transition-all duration-500 shadow-sm",
+                        isObjectiveMet
+                            ? "bg-emerald-50/50 border-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-300"
+                            : "bg-slate-50/50 border-slate-200 text-slate-600 dark:bg-slate-900/20 dark:border-slate-800"
+                    )}>
+                        <p className="text-sm font-medium leading-relaxed">
+                            {isObjectiveMet ? (
+                                <>
+                                    <span className="font-extrabold text-lg block mb-1 italic">¡BRUTAL JOSU! 🚀</span>
+                                    Estás ahorrando un <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>.
+                                    Objetivo superado.
+                                </>
+                            ) : (
+                                <>
+                                    <span className="font-bold block mb-1 uppercase tracking-tight">VAMOS JOSU 💪</span>
+                                    Te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para llegar a tu objetivo.
+                                </>
+                            )}
+                        </p>
+                    </div>
+
+                    <SavingsGoalProgress
+                        currentSavings={actualSavings}
+                        totalIncome={totalIncome}
+                        targetPercentage={targetPercentage}
+                    />
                 </div>
             </div>
 
@@ -180,11 +189,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         <YearSelector currentYear={statsYear} />
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div className="lg:col-span-2">
+                            <div className="lg:col-span-2 space-y-8">
                                 <MonthlyComparisonChart
                                     data={yearlyStats}
                                     title={`Comparativa Mensual ${statsYear}`}
                                     description={`Ingresos vs Gastos vs Inversión en ${statsYear}`}
+                                />
+
+                                <SavingsGrowthChart
+                                    data={yearlyStats}
+                                    title="Crecimiento del Ahorro"
+                                    description="Relación entre ahorro mensual, gastos y ahorro acumulado"
                                 />
                             </div>
                             <div className="lg:col-span-1">
