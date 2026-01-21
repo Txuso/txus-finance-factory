@@ -6,7 +6,7 @@ export interface ParsedTransaction {
     descripcion: string;
     monto: number;
     categoria: Categoria;
-    tipo: 'Gasto variable' | 'Gasto fijo' | 'Ingreso';
+    tipo: 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión';
 }
 
 function guessCategory(description: string): Categoria {
@@ -49,10 +49,13 @@ function guessCategory(description: string): Categoria {
     return 'Otros';
 }
 
-function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' {
+function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
     const desc = description.toUpperCase();
 
     if (amount > 0) return 'Ingreso';
+
+    // Inversiones
+    if (desc.includes('INDEXA') || desc.includes('REVOLUT')) return 'Inversión';
 
     // Ingresos específicos por nombre (aunque el monto debería ser > 0, por si acaso)
     if (desc.includes('NOMINA') || desc.includes('TRANSF. MANGOPAY')) return 'Ingreso';

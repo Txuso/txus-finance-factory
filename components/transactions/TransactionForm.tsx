@@ -64,13 +64,15 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         if (initialData) {
             form.reset({
                 ...initialData,
+                notas: initialData.notas || "",
                 fecha: initialData.fecha ? new Date(initialData.fecha) : undefined,
                 meses_aplicacion: (initialData as any)?.meses_aplicacion || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            })
+            } as any)
         }
     }, [initialData, form])
 
     async function onSubmit(data: TransactionFormValues) {
+        console.log("Submit detectado. Datos:", data);
         setIsSubmitting(true)
         try {
             // Aseguramos que los gastos sean negativos para la DB
@@ -79,12 +81,16 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                 monto: data.tipo === 'Ingreso' ? Math.abs(data.monto) : -Math.abs(data.monto)
             };
 
+            console.log("Enviando a la acción:", initialData?.id ? "UPDATE" : "CREATE", finalData);
+
             let result;
             if (initialData?.id) {
                 result = await updateTransaction(initialData.id, finalData)
             } else {
                 result = await createTransaction(finalData)
             }
+
+            console.log("Resultado de la acción:", result);
 
             if (result.error) {
                 toast.error(result.error)
@@ -98,15 +104,35 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                 }
             }
         } catch (error) {
+            console.error("Error en onSubmit:", error);
             toast.error("Ocurrió un error inesperado")
         } finally {
             setIsSubmitting(false)
         }
     }
 
+    const onError = (errors: any) => {
+        console.error("Errores de validación:", errors);
+        const errorFields = Object.keys(errors).map(key => {
+            const fieldNames: Record<string, string> = {
+                descripcion: "Título",
+                monto: "Monto",
+                fecha: "Fecha",
+                categoria: "Categoría",
+                tipo: "Tipo",
+                metodo_pago: "Método de Pago",
+                notas: "Notas",
+                meses_aplicacion: "Meses de Aplicación"
+            };
+            return fieldNames[key] || key;
+        }).join(", ");
+
+        toast.error(`Revisa estos campos: ${errorFields}`);
+    }
+
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Descripción -> Título */}
                     <FormField
@@ -197,7 +223,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Categoría</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <FormControl>
                                         <SelectTrigger className="bg-background/50 backdrop-blur-sm">
                                             <SelectValue placeholder="Selecciona una categoría" />
@@ -223,7 +249,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Tipo</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <FormControl>
                                         <SelectTrigger className="bg-background/50 backdrop-blur-sm">
                                             <SelectValue placeholder="Tipo de transacción" />
@@ -249,7 +275,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Método de Pago</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <FormControl>
                                         <SelectTrigger className="bg-background/50 backdrop-blur-sm">
                                             <SelectValue placeholder="Método de pago" />
@@ -290,62 +316,69 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                     )}
                     {/* Selector de Meses (Solo para Gasto fijo) */}
                     {form.watch("tipo" as any) === "Gasto fijo" && (
-                        <div className="col-span-1 md:col-span-2 space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                            <div className="flex items-center justify-between">
-                                <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                                    <CalendarIcon className="h-4 w-4 text-blue-500" />
-                                    Meses en los que aplica
-                                </FormLabel>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs text-blue-600 hover:text-blue-700 font-medium px-2"
-                                    onClick={() => {
-                                        const current = (form.getValues("meses_aplicacion" as any) as number[]) || [];
-                                        if (current.length === 12) {
-                                            form.setValue("meses_aplicacion" as any, []);
-                                        } else {
-                                            form.setValue("meses_aplicacion" as any, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-                                        }
-                                    }}
-                                >
-                                    {(form.watch("meses_aplicacion" as any) as number[])?.length === 12 ? "Ninguno" : "Todos"}
-                                </Button>
-                            </div>
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                                {["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"].map((mes, index) => {
-                                    const monthNum = index + 1;
-                                    const isSelected = (form.watch("meses_aplicacion" as any) as number[])?.includes(monthNum);
-                                    return (
+                        <FormField
+                            control={form.control}
+                            name="meses_aplicacion"
+                            render={({ field }) => (
+                                <FormItem className="col-span-1 md:col-span-2 space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-blue-500" />
+                                            Meses en los que aplica
+                                        </FormLabel>
                                         <Button
-                                            key={mes}
                                             type="button"
-                                            variant={isSelected ? "default" : "outline"}
+                                            variant="ghost"
                                             size="sm"
-                                            className={cn(
-                                                "h-9 text-xs font-medium transition-all",
-                                                isSelected
-                                                    ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent shadow-sm"
-                                                    : "bg-white dark:bg-slate-900 hover:border-blue-300"
-                                            )}
+                                            className="h-7 text-xs text-blue-600 hover:text-blue-700 font-medium px-2"
                                             onClick={() => {
-                                                const current = (form.getValues("meses_aplicacion" as any) as number[]) || [];
-                                                const next = current.includes(monthNum)
-                                                    ? current.filter(m => m !== monthNum)
-                                                    : [...current, monthNum].sort((a, b) => a - b);
-                                                form.setValue("meses_aplicacion" as any, next);
+                                                const current = field.value || [];
+                                                if (current.length === 12) {
+                                                    field.onChange([]);
+                                                } else {
+                                                    field.onChange([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+                                                }
                                             }}
                                         >
-                                            {mes}
+                                            {field.value?.length === 12 ? "Ninguno" : "Todos"}
                                         </Button>
-                                    );
-                                })}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground italic">
-                                * Si es un gasto fijo, se guardará como plantilla para aparecer automáticamente en los meses seleccionados.
-                            </p>
-                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                        {["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"].map((mes, index) => {
+                                            const monthNum = index + 1;
+                                            const isSelected = field.value?.includes(monthNum);
+                                            return (
+                                                <Button
+                                                    key={mes}
+                                                    type="button"
+                                                    variant={isSelected ? "default" : "outline"}
+                                                    size="sm"
+                                                    className={cn(
+                                                        "h-9 text-xs font-medium transition-all",
+                                                        isSelected
+                                                            ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent shadow-sm"
+                                                            : "bg-white dark:bg-slate-900 hover:border-blue-300"
+                                                    )}
+                                                    onClick={() => {
+                                                        const current = field.value || [];
+                                                        const next = current.includes(monthNum)
+                                                            ? current.filter((m: number) => m !== monthNum)
+                                                            : [...current, monthNum].sort((a: number, b: number) => a - b);
+                                                        field.onChange(next);
+                                                    }}
+                                                >
+                                                    {mes}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                    <FormMessage />
+                                    <p className="text-[10px] text-muted-foreground italic">
+                                        * Si es un gasto fijo, se guardará como plantilla para aparecer automáticamente en los meses seleccionados.
+                                    </p>
+                                </FormItem>
+                            )}
+                        />
                     )}
                 </div>
 

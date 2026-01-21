@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction"
-import { CheckCircle2, AlertCircle, TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp } from "lucide-react"
+import { TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { deleteTransaction, excludeRecurringExpense } from "@/app/actions/transaction"
 import { toast } from "sonner"
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { useState } from "react"
-import { format, startOfMonth } from "date-fns"
+import { format } from "date-fns"
 
 interface ExpenseTablesProps {
     transactions: Transaccion[]
@@ -28,11 +28,17 @@ interface ExpenseTablesProps {
 
 export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTablesProps) {
     const [isVariablesExpanded, setIsVariablesExpanded] = useState(false);
+    const [isFixedExpanded, setIsFixedExpanded] = useState(false);
+    const [isInvestmentsExpanded, setIsInvestmentsExpanded] = useState(false);
+    const [isIncomeExpanded, setIsIncomeExpanded] = useState(false);
 
-    // 1. Identificar Gastos Variables
-    const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable');
+    // 1. Identificar Gastos Variables (Excluyendo Inversiones)
+    const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable' && t.categoria !== 'Inversión');
 
-    // 2. Procesar Gastos Fijos
+    // 2. Identificar Inversiones
+    const investmentTransactions = transactions.filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión');
+
+    // 3. Procesar Gastos Fijos
     const fixedExpensesList = recurringExpenses.map(recurring => {
         const match = transactions.find(t =>
             t.tipo === 'Gasto fijo' &&
@@ -53,18 +59,11 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
         !matchedTransactionIds.includes(t.id)
     );
 
-    // Calucular Totales
-    // Sumamos los valores RAW (negativos = gasto, positivos = ingreso/abono)
-    // Luego invertimos el signo para mostrar el "Gasto Total" como positivo
-    // EXCLUIMOS las inversiones del total de gastos variables
-    const totalVariableRaw = variableExpenses
-        .filter(t => t.categoria !== 'Inversión' && t.tipo !== 'Inversión')
-        .reduce((sum, t) => sum + t.monto, 0);
-    const totalVariable = Math.abs(totalVariableRaw);
+    // Calcular Totales
+    const totalVariable = Math.abs(variableExpenses.reduce((sum, t) => sum + t.monto, 0));
+    const totalInvestments = Math.abs(investmentTransactions.reduce((sum, t) => sum + t.monto, 0));
 
     // Para gastos fijos (Total Mes Teórico):
-    // 1. Sumamos SIEMPRE el 'monto_estimado' de los gastos recurrentes (independiente de si se pagaron o no).
-    // 2. Sumamos los gastos extra (reales) que hayan ocurrido.
     const totalFixed = recurringExpenses.reduce((sum, item) => sum + item.monto_estimado, 0)
         + extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
@@ -74,105 +73,6 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-    }
-
-    const handleDelete = async (id: string) => {
-        if (confirm("¿Estás seguro de que quieres eliminar esta transacción?")) {
-            const res = await deleteTransaction(id);
-            if (res.error) {
-                toast.error(res.error);
-            } else {
-                toast.success("Transacción eliminada");
-            }
-        }
-    }
-
-    const handleExclude = async (recurringId: string) => {
-        if (confirm("¿Quieres omitir este gasto solo para este mes?")) {
-            // Necesitamos la fecha actual del dashboard. Tendremos que pasarla como prop o usar un contexto.
-            // Por ahora asumimos la fecha actual de la UI.
-            const res = await excludeRecurringExpense(recurringId, new Date()); // temporal
-            if (res.error) {
-                toast.error(res.error);
-            } else {
-                toast.success("Gasto omitido para este mes");
-            }
-        }
-    }
-
-    // Componente de acciones reutilizable para Filas
-    const TransactionActions = ({ transaction, recurring, currentMonth }: { transaction?: Transaccion; recurring?: GastoRecurrente; currentMonth?: Date }) => {
-        const [open, setOpen] = useState(false);
-
-        // Adaptar transaccion a TransactionFormValues o usar el recurring como base
-        const initialData = transaction
-            ? {
-                ...transaction,
-                monto: Math.abs(transaction.monto),
-                fecha: new Date(transaction.fecha),
-                meses_aplicacion: recurring?.meses_aplicacion // Pass template applicability if available
-            }
-            : recurring
-                ? {
-                    descripcion: recurring.descripcion,
-                    monto: Math.abs(recurring.monto_estimado), // Gastos se muestran en positivo en el form
-                    tipo: 'Gasto fijo' as const,
-                    categoria: recurring.categoria,
-                    fecha: new Date(),
-                    metodo_pago: 'Tarjeta' as const,
-                    es_automatico: false,
-                    meses_aplicacion: recurring.meses_aplicacion,
-                }
-                : undefined;
-
-        if (!initialData) return null;
-
-        return (
-            <div className="flex items-center justify-end gap-2">
-                <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50">
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                            <DialogTitle>{transaction ? "Editar Transacción" : "Registrar Pago Fijo"}</DialogTitle>
-                            <DialogDescription>
-                                {transaction
-                                    ? "Modifica los datos de la transacción."
-                                    : "Define los detalles finales para registrar este gasto fijo."}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <TransactionForm
-                            initialData={initialData}
-                            onSuccess={() => setOpen(false)}
-                        />
-                    </DialogContent>
-                </Dialog>
-
-                {transaction ? (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDelete(transaction.id)}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                ) : recurring && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        onClick={() => handleExclude(recurring.id)}
-                        title="Omitir solo este mes"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                )}
-            </div>
-        )
     }
 
     return (
@@ -202,42 +102,78 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {fixedExpensesList.map((item) => (
-                                    <TableRow key={item.definition.id}>
-                                        <TableCell className="font-medium text-slate-700 dark:text-slate-200">
-                                            {item.definition.descripcion}
-                                        </TableCell>
-                                        <TableCell className="text-xs text-muted-foreground italic">
-                                            {item.transaction?.descripcion || "-"}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {item.transaction ? (
-                                                <span className="font-bold text-slate-900 dark:text-slate-100">
-                                                    {formatCurrency(Math.abs(item.transaction.monto))}
-                                                </span>
-                                            ) : (
-                                                <span className="text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatCurrency(item.definition.monto_estimado)}
-                                                </span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <TransactionActions transaction={item.transaction} recurring={item.definition} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {(() => {
+                                    const allFixed = [
+                                        ...fixedExpensesList.map(item => ({ type: 'definition', data: item })),
+                                        ...extraFixedExpenses.map(t => ({ type: 'extra', data: t }))
+                                    ];
+                                    const displayedFixed = isFixedExpanded ? allFixed : allFixed.slice(0, 5);
 
-                                {/* Gastos Fijos Extra */}
-                                {extraFixedExpenses.map((t) => (
-                                    <TableRow key={t.id} className="bg-slate-50/50">
-                                        <TableCell className="font-medium text-slate-600 italic">{t.descripcion}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
-                                        <TableCell className="text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
-                                        <TableCell>
-                                            <TransactionActions transaction={t} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                    return (
+                                        <>
+                                            {displayedFixed.map((item, idx) => {
+                                                if (item.type === 'definition') {
+                                                    const def = item.data as typeof fixedExpensesList[0];
+                                                    return (
+                                                        <TableRow key={`def-${def.definition.id}`}>
+                                                            <TableCell className="font-medium text-slate-700 dark:text-slate-200">
+                                                                {def.definition.descripcion}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground italic">
+                                                                {def.transaction?.descripcion || "-"}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {def.transaction ? (
+                                                                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                                                                        {formatCurrency(Math.abs(def.transaction.monto))}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-slate-900 dark:text-slate-100 font-medium">
+                                                                        {formatCurrency(def.definition.monto_estimado)}
+                                                                    </span>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <TransactionActionsInner transaction={def.transaction} recurring={def.definition} />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                } else {
+                                                    const t = item.data as typeof extraFixedExpenses[0];
+                                                    return (
+                                                        <TableRow key={`extra-${t.id}`} className="bg-slate-50/50">
+                                                            <TableCell className="font-medium text-slate-600 italic">{t.descripcion}</TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
+                                                            <TableCell className="text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
+                                                            <TableCell>
+                                                                <TransactionActionsInner transaction={t} />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                }
+                                            })}
+
+                                            {allFixed.length > 5 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="text-center p-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setIsFixedExpanded(!isFixedExpanded)}
+                                                            className="w-full text-muted-foreground hover:text-foreground text-xs"
+                                                        >
+                                                            {isFixedExpanded ? (
+                                                                <span className="flex items-center gap-2 justify-center">Ver menos <ChevronUp className="h-4 w-4" /></span>
+                                                            ) : (
+                                                                <span className="flex items-center gap-2 justify-center">Ver {allFixed.length - 5} más <ChevronDown className="h-4 w-4" /></span>
+                                                            )}
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </TableBody>
                         </Table>
                     </div>
@@ -279,21 +215,21 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                 ) : (
                                     <>
                                         {(isVariablesExpanded ? variableExpenses : variableExpenses.slice(0, 5)).map((t) => (
-                                            <TableRow key={t.id} className={t.categoria === 'Inversión' ? "bg-blue-50/30" : ""}>
+                                            <TableRow key={t.id}>
                                                 <TableCell className="text-muted-foreground text-xs sm:text-sm">
                                                     {format(new Date(t.fecha), 'dd/MM')}
                                                 </TableCell>
                                                 <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline" className={cn("text-[10px] sm:text-xs", t.categoria === 'Inversión' ? "border-blue-200 text-blue-700 bg-blue-50" : "")}>
+                                                    <Badge variant="outline" className="text-[10px] sm:text-xs">
                                                         {t.categoria}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className={`text-right font-bold text-xs sm:text-sm ${t.categoria === 'Inversión' ? "text-blue-600" : "text-rose-600"}`}>
+                                                <TableCell className="text-right font-bold text-rose-600 text-xs sm:text-sm">
                                                     {formatCurrency(Math.abs(t.monto))}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <TransactionActions transaction={t} />
+                                                    <TransactionActionsInner transaction={t} />
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -321,10 +257,75 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         </Table>
                     </div>
                 </CardContent>
-            </Card >
+            </Card>
+
+            {/* TABLA DE INVERSIONES */}
+            {investmentTransactions.length > 0 && (
+                <Card className="border-l-4 border-l-blue-400 shadow-md">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                                <TrendingDown className="h-5 w-5 text-blue-400" />
+                                Inversiones / Ahorro activo
+                            </span>
+                            <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                                {formatCurrency(totalInvestments)}
+                            </span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 sm:p-6">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[100px]">Fecha</TableHead>
+                                        <TableHead>Descripción</TableHead>
+                                        <TableHead className="text-right">Monto</TableHead>
+                                        <TableHead className="w-[100px]"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {(isInvestmentsExpanded ? investmentTransactions : investmentTransactions.slice(0, 5)).map((t) => (
+                                        <TableRow key={t.id} className="bg-blue-50/10">
+                                            <TableCell className="text-muted-foreground text-xs sm:text-sm">
+                                                {format(new Date(t.fecha), 'dd/MM')}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
+                                            <TableCell className="text-right font-bold text-blue-600 dark:text-blue-400 text-xs sm:text-sm">
+                                                {formatCurrency(Math.abs(t.monto))}
+                                            </TableCell>
+                                            <TableCell>
+                                                <TransactionActionsInner transaction={t} />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {investmentTransactions.length > 5 && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center p-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsInvestmentsExpanded(!isInvestmentsExpanded)}
+                                                    className="w-full text-muted-foreground hover:text-foreground text-xs"
+                                                >
+                                                    {isInvestmentsExpanded ? (
+                                                        <span className="flex items-center gap-2 justify-center">Ver menos <ChevronUp className="h-4 w-4" /></span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-2 justify-center">Ver {investmentTransactions.length - 5} más <ChevronDown className="h-4 w-4" /></span>
+                                                    )}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* TABLA DE INGRESOS */}
-            < Card className="border-l-4 border-l-emerald-500 shadow-md" >
+            <Card className="border-l-4 border-l-emerald-500 shadow-md">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
@@ -356,29 +357,148 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    incomeTransactions.map((t) => (
-                                        <TableRow key={t.id}>
-                                            <TableCell className="text-muted-foreground text-xs sm:text-sm">
-                                                {format(new Date(t.fecha), 'dd/MM')}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="text-[10px] sm:text-xs border-emerald-200 text-emerald-700 bg-emerald-50">{t.categoria}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right font-bold text-emerald-600 text-xs sm:text-sm">
-                                                {formatCurrency(Math.abs(t.monto))}
-                                            </TableCell>
-                                            <TableCell>
-                                                <TransactionActions transaction={t} />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                    <>
+                                        {(isIncomeExpanded ? incomeTransactions : incomeTransactions.slice(0, 5)).map((t) => (
+                                            <TableRow key={t.id}>
+                                                <TableCell className="text-muted-foreground text-xs sm:text-sm">
+                                                    {format(new Date(t.fecha), 'dd/MM')}
+                                                </TableCell>
+                                                <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-[10px] sm:text-xs border-emerald-200 text-emerald-700 bg-emerald-50">{t.categoria}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold text-emerald-600 text-xs sm:text-sm">
+                                                    {formatCurrency(Math.abs(t.monto))}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TransactionActionsInner transaction={t} />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {incomeTransactions.length > 5 && (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center p-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setIsIncomeExpanded(!isIncomeExpanded)}
+                                                        className="w-full text-muted-foreground hover:text-foreground text-xs"
+                                                    >
+                                                        {isIncomeExpanded ? (
+                                                            <span className="flex items-center gap-2 justify-center">Ver menos <ChevronUp className="h-4 w-4" /></span>
+                                                        ) : (
+                                                            <span className="flex items-center gap-2 justify-center">Ver {incomeTransactions.length - 5} más <ChevronDown className="h-4 w-4" /></span>
+                                                        )}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </>
                                 )}
                             </TableBody>
                         </Table>
                     </div>
                 </CardContent>
-            </Card >
-        </div >
+            </Card>
+        </div>
+    );
+}
+
+// Componente de acciones reutilizable para Filas (Fuera de ExpenseTables para evitar remounts)
+function TransactionActionsInner({ transaction, recurring }: { transaction?: Transaccion; recurring?: GastoRecurrente }) {
+    const [open, setOpen] = useState(false);
+
+    // Adaptar transaccion a TransactionFormValues o usar el recurring como base
+    const initialData = transaction
+        ? {
+            id: transaction.id,
+            descripcion: transaction.descripcion,
+            monto: Math.abs(transaction.monto),
+            fecha: new Date(transaction.fecha),
+            categoria: transaction.categoria,
+            tipo: transaction.tipo,
+            metodo_pago: transaction.metodo_pago,
+            es_automatico: transaction.es_automatico,
+            notas: transaction.notas,
+            meses_aplicacion: (transaction as any).meses_aplicacion || recurring?.meses_aplicacion
+        }
+        : recurring
+            ? {
+                descripcion: recurring.descripcion,
+                monto: Math.abs(recurring.monto_estimado),
+                tipo: 'Gasto fijo' as const,
+                categoria: recurring.categoria,
+                fecha: new Date(),
+                metodo_pago: 'Tarjeta' as const,
+                es_automatico: false,
+                meses_aplicacion: recurring.meses_aplicacion,
+            }
+            : undefined;
+
+    if (!initialData) return null;
+
+    return (
+        <div className="flex items-center justify-end gap-2">
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50">
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>{transaction ? "Editar Transacción" : "Registrar Pago Fijo"}</DialogTitle>
+                        <DialogDescription>
+                            {transaction
+                                ? "Modifica los datos de la transacción."
+                                : "Define los detalles finales para registrar este gasto fijo."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <TransactionForm
+                        initialData={initialData as any}
+                        onSuccess={() => setOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {transaction ? (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={async () => {
+                        if (confirm("¿Estás seguro de que quieres eliminar esta transacción?")) {
+                            const res = await deleteTransaction(transaction.id);
+                            if (res.error) {
+                                toast.error(res.error);
+                            } else {
+                                toast.success("Transacción eliminada");
+                            }
+                        }
+                    }}
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            ) : recurring && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                    onClick={async () => {
+                        if (confirm("¿Quieres omitir este gasto solo para este mes?")) {
+                            const res = await excludeRecurringExpense(recurring.id, new Date());
+                            if (res.error) {
+                                toast.error(res.error);
+                            } else {
+                                toast.success("Gasto omitido para este mes");
+                            }
+                        }
+                    }}
+                    title="Omitir solo este mes"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            )}
+        </div>
     )
 }

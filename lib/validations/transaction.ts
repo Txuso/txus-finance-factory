@@ -5,7 +5,7 @@ export const transactionSchema = z.object({
     descripcion: z.string().min(2, {
         message: "El título debe tener al menos 2 caracteres.",
     }),
-    notas: z.string().optional(),
+    notas: z.string().nullable().optional(),
     monto: z.coerce.number().refine(val => Math.abs(val) >= 0.01, {
         message: "El monto debe ser distinto de 0.",
     }),
@@ -23,7 +23,8 @@ export const transactionSchema = z.object({
         errorMap: () => ({ message: "Selecciona un método de pago válido." }),
     }),
     es_automatico: z.boolean().default(false),
-    meses_aplicacion: z.array(z.number()).optional(),
+    meses_aplicacion: z.array(z.number()).nullable().optional(),
+    id: z.string().nullable().optional(),
 });
 
 export const recurringSchema = z.object({

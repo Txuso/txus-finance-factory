@@ -45,12 +45,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
     const totalIncome = incomeTransactions.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-    const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable');
+    const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable' && t.categoria !== 'Inversión');
     const totalVariable = Math.abs(variableExpenses
-        .filter(t => t.categoria !== 'Inversión' && t.tipo !== 'Inversión')
         .reduce((sum, t) => sum + t.monto, 0));
 
-    // Identificar fijos extra (no recurrentes matched)
+    // ... fixed expenses logic ...
     const matchedTransactionIds = recurringExpenses.map(recurring => {
         const match = transactions.find(t =>
             t.tipo === 'Gasto fijo' &&
@@ -69,7 +68,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         + extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
     const totalInvestments = Math.abs(transactions
-        .filter(t => t.categoria === 'Inversión' || t.tipo === 'Inversión')
+        .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
         .reduce((sum, t) => sum + t.monto, 0));
 
     // Lógica de objetivo de ahorro

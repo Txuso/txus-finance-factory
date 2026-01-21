@@ -106,26 +106,60 @@ import { supabase } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 
 export async function saveImportedTransactions(transactions: ParsedTransaction[]) {
-    // Transform formatting for DB
+    // 1. Transform formatting for DB
     const dbTransactions = transactions.map(t => ({
         descripcion: t.descripcion,
         monto: t.monto,
         categoria: t.categoria,
         tipo: t.tipo,
-        metodo_pago: 'Tarjeta', // Default for Bank Import
+        metodo_pago: 'Tarjeta' as const, // Default for Bank Import
         es_automatico: false,
         fecha: new Date(t.fecha).toISOString()
     }));
 
-    const { error } = await supabase
+    // 2. Insert transactions
+    const { error: insertError } = await supabase
         .from('transacciones')
         .insert(dbTransactions);
 
-    if (error) {
-        console.error("Bulk Insert Error:", error);
+    if (insertError) {
+        console.error("Bulk Insert Error:", insertError);
         return { error: "Error al guardar las transacciones" };
     }
 
+    // 3. Sync Fixed Expenses with gastos_recurrentes
+    const fixedExpenses = transactions.filter(t => t.tipo === 'Gasto fijo');
+
+    for (const fe of fixedExpenses) {
+        // Check if recurring already exists
+        const { data: existing } = await supabase
+            .from('gastos_recurrentes')
+            .select('id')
+            .eq('descripcion', fe.descripcion)
+            .maybeSingle();
+
+        const recurringData = {
+            descripcion: fe.descripcion,
+            monto_estimado: Math.abs(fe.monto),
+            categoria: fe.categoria,
+            meses_aplicacion: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // Default for imported
+            dia_cobro_estimado: new Date(fe.fecha).getDate(),
+            activo: true
+        };
+
+        if (existing) {
+            await supabase
+                .from('gastos_recurrentes')
+                .update(recurringData)
+                .eq('id', existing.id);
+        } else {
+            await supabase
+                .from('gastos_recurrentes')
+                .insert([recurringData]);
+        }
+    }
+
     revalidatePath('/dashboard');
+    revalidatePath('/transactions');
     return { success: true };
 }
