@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { getDashboardData, getYearlyStats, getCategoryStats } from "@/lib/data/dashboard"
+import { createClient } from "@/lib/supabase/server"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
 import { AddTransactionFAB } from "@/components/transactions/AddTransactionFAB"
@@ -42,6 +43,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const categoryStats = await getCategoryStats(statsYear);
 
     const { transactions, recurringExpenses, config } = await getDashboardData(currentDate);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || "Josu";
+    const firstName = userName.split(' ')[0];
+    const hour = now.getHours();
+    let greeting = "¡Hola";
+    if (hour >= 6 && hour < 12) greeting = "Buenos días";
+    else if (hour >= 12 && hour < 20) greeting = "Buenas tardes";
+    else greeting = "Buenas noches";
 
     // Cálculos para KPIs (Lógica centralizada en el servidor)
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
@@ -85,15 +95,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <div className="flex flex-col items-center space-y-4 relative px-4 text-center">
                 <div className="flex items-center justify-between w-full sm:justify-center relative gap-2 sm:gap-4">
                     <div className="sm:hidden w-10" />
-                    <div className="flex items-center gap-3 sm:gap-4">
-                        <img
-                            src="/logo.png"
-                            alt="Logo"
-                            className="w-10 h-10 sm:w-14 sm:h-14 object-contain filter drop-shadow-md"
-                        />
-                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent italic">
-                            Txus Finance Factory
-                        </h1>
+                    <div className="flex flex-col items-center gap-1 sm:gap-2">
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground italic mb-[-8px]">
+                            {greeting}, {firstName}
+                        </p>
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <img
+                                src="/logo.png"
+                                alt="Logo"
+                                className="w-10 h-10 sm:w-14 sm:h-14 object-contain filter drop-shadow-md"
+                            />
+                            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent italic">
+                                Txus Finance Factory
+                            </h1>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-1 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
@@ -119,13 +134,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         <p className="text-sm font-medium leading-relaxed">
                             {isObjectiveMet ? (
                                 <>
-                                    <span className="font-extrabold text-lg block mb-1 italic">¡BRUTAL JOSU! 🚀</span>
+                                    <span className="font-extrabold text-lg block mb-1 italic">¡BRUTAL {firstName.toUpperCase()}! 🚀</span>
                                     Estás ahorrando un <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>.
                                     Objetivo superado.
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-bold block mb-1 uppercase tracking-tight">VAMOS JOSU 💪</span>
+                                    <span className="font-bold block mb-1 uppercase tracking-tight">VAMOS {firstName.toUpperCase()} 💪</span>
                                     Te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para llegar a tu objetivo.
                                 </>
                             )}
