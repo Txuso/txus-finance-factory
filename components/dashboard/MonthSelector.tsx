@@ -79,7 +79,7 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                 <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 rounded-full"
+                    className="h-8 w-8 rounded-full transition-all hover:scale-110 active:scale-95 cursor-pointer"
                     onClick={() => onMonthChange(subMonths(currentDate, 1))}
                 >
                     <ChevronLeft className="h-4 w-4" />
@@ -89,7 +89,7 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                         variant="ghost"
                         size="sm"
                         onClick={() => onMonthChange(new Date())}
-                        className="h-8 px-4 text-[10px] uppercase font-bold text-blue-500 rounded-full border border-blue-100 dark:border-blue-900/30"
+                        className="h-8 px-4 text-[10px] uppercase font-bold text-blue-500 rounded-full border border-blue-100 dark:border-blue-900/30 transition-all hover:scale-110 active:scale-95 cursor-pointer"
                     >
                         Volver a Hoy
                     </Button>
@@ -97,7 +97,7 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                 <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 rounded-full"
+                    className="h-8 w-8 rounded-full transition-all hover:scale-110 active:scale-95 cursor-pointer"
                     onClick={() => onMonthChange(addMonths(currentDate, 1))}
                 >
                     <ChevronRight className="h-4 w-4" />
@@ -111,7 +111,7 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                         variant="ghost"
                         size="sm"
                         onClick={() => onMonthChange(new Date())}
-                        className="h-7 px-3 text-[10px] uppercase tracking-widest font-bold text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-all border border-blue-100/50 dark:border-blue-900/20"
+                        className="h-7 px-3 text-[10px] uppercase tracking-widest font-bold text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-all border border-blue-100/50 dark:border-blue-900/20 hover:scale-110 active:scale-95 cursor-pointer"
                     >
                         Volver al mes actual
                     </Button>

@@ -79,18 +79,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
     return (
         <div className="container mx-auto py-10 space-y-8">
-            <div className="flex flex-col items-center space-y-4 relative">
-                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                    Txus Finance Factory
-                </h1>
+            <div className="flex flex-col items-center space-y-4 relative px-4">
+                <div className="flex items-center justify-between w-full sm:justify-center relative">
+                    <div className="sm:hidden w-10" /> {/* Spacer to help center title on mobile if buttons are on right */}
+                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent text-center">
+                        Txus Finance Factory
+                    </h1>
 
-                <div className="absolute right-0 top-0 flex items-center gap-2">
-                    <Link href="/settings">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                            <SettingsIcon className="h-6 w-6" />
-                        </Button>
-                    </Link>
-                    <ImportDialog />
+                    <div className="flex items-center gap-1 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
+                        <Link href="/settings">
+                            <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-12 sm:w-12 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 active:scale-95">
+                                <SettingsIcon className="h-6 w-6 sm:h-8 sm:w-8" />
+                            </Button>
+                        </Link>
+                        <ImportDialog />
+                    </div>
                 </div>
 
                 <MonthSelectorWrapper initialDate={currentDate} />
@@ -131,14 +134,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-sm p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/50 h-auto">
                         <TabsTrigger
                             value="summary"
-                            className="rounded-lg px-6 py-2.5 flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all font-medium text-slate-500"
+                            className="rounded-lg px-6 py-2.5 flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all hover:scale-105 active:scale-95 cursor-pointer font-medium text-slate-500"
                         >
                             <Wallet className="h-4 w-4" />
                             Resumen Mensual
                         </TabsTrigger>
                         <TabsTrigger
                             value="stats"
-                            className="rounded-lg px-6 py-2.5 flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all font-medium text-slate-500"
+                            className="rounded-lg px-6 py-2.5 flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all hover:scale-105 active:scale-95 cursor-pointer font-medium text-slate-500"
                         >
                             <TrendingUp className="h-4 w-4" />
                             Estadísticas

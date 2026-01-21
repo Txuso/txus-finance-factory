@@ -128,7 +128,7 @@ export function ImportDialog() {
                             <Button variant="ghost" size="sm" onClick={() => setStep('upload')}><RotateCcw className="h-4 w-4 mr-2" /> Volver</Button>
                         </div>
 
-                        <div className="border rounded-md">
+                        <div className="border rounded-md overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -139,8 +139,6 @@ export function ImportDialog() {
                                         <TableHead></TableHead>
                                     </TableRow>
                                 </TableHeader>
-// Add imports at top (managed by separate edit or implicitly here if I could, but I'll do standard replace)
-
                                 <TableBody>
                                     {transactions.map((t, i) => (
                                         <TableRow key={i}>

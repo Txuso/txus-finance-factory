@@ -123,4 +123,35 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  .container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Efectos de interacción globales */
+@layer components {
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105 active:scale-95 cursor-pointer;
+  }
+}
+
+/* Aplicar escala a botones y enlaces por defecto para una experiencia premium */
+button,
+a,
+[role="button"],
+.cursor-pointer {
+  @apply transition-transform duration-200 cursor-pointer;
+}
+
+button:hover,
+a:hover,
+[role="button"]:hover {
+  transform: scale(1.03);
+}
+
+button:active,
+a:active,
+[role="button"]:active {
+  transform: scale(0.97);
 }
