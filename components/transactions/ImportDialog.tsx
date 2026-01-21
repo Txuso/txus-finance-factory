@@ -93,10 +93,11 @@ export function ImportDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="gap-2">
-                        <Upload className="h-4 w-4" /> Importar PDF
+                    <Button variant="outline" className="gap-2 sm:px-4 px-3 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-800/50">
+                        <Upload className="h-4 w-4" />
+                        <span className="hidden sm:inline">Importar PDF</span>
                     </Button>
-                    <Button variant="destructive" size="icon" onClick={(e) => { e.stopPropagation(); handleResetData(); }} title="RESET DATA (Testing)">
+                    <Button variant="destructive" size="icon" className="rounded-2xl shadow-sm hover:bg-rose-600 transition-colors" onClick={(e) => { e.stopPropagation(); handleResetData(); }} title="RESET DATA (Testing)">
                         <Trash2 className="h-4 w-4" />
                     </Button>
                 </div>

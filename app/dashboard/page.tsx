@@ -91,37 +91,42 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const savingsNeeded = (totalIncome * targetPercentage) - actualSavings;
 
     return (
-        <div className="container mx-auto py-10 space-y-8">
-            <div className="flex flex-col items-center space-y-4 relative px-4 text-center">
-                <div className="flex items-center justify-between w-full sm:justify-center relative gap-2 sm:gap-4">
-                    <div className="sm:hidden w-10" />
-                    <div className="flex flex-col items-center gap-1 sm:gap-2">
-                        <p className="text-xs sm:text-sm font-medium text-muted-foreground italic mb-[-8px]">
-                            {greeting}, {firstName}
-                        </p>
-                        <div className="flex items-center gap-3 sm:gap-4">
-                            <img
-                                src="/logo.png"
-                                alt="Logo"
-                                className="w-10 h-10 sm:w-14 sm:h-14 object-contain filter drop-shadow-md"
-                            />
-                            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent italic">
-                                Txus Finance Factory
-                            </h1>
-                        </div>
-                    </div>
+        <div className="container mx-auto py-6 sm:py-10 space-y-6 sm:space-y-8">
+            <div className="flex flex-col items-center space-y-4 relative px-4 text-center transition-all duration-300">
+                {/* Saludo y Nombre */}
+                <p className="text-xs sm:text-sm font-semibold text-muted-foreground/80 italic tracking-wide animate-in fade-in slide-in-from-top-2 duration-700">
+                    {greeting}, {firstName}
+                </p>
 
-                    <div className="flex items-center gap-1 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
-                        <Link href="/settings">
-                            <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-12 sm:w-12 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 active:scale-95">
-                                <SettingsIcon className="h-6 w-6 sm:h-8 sm:w-8" />
-                            </Button>
-                        </Link>
-                        <ImportDialog />
-                    </div>
+                {/* Logo y Título Principal */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 group">
+                    <img
+                        src="/logo.png"
+                        alt="Logo"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain filter drop-shadow-xl transition-transform group-hover:scale-105 duration-300"
+                    />
+                    <h1 className="text-3xl sm:text-5xl font-black tracking-tighter bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent italic leading-tight">
+                        Txus Finance Factory
+                    </h1>
                 </div>
 
-                <MonthSelectorWrapper initialDate={currentDate} />
+                {/* Botones de Acción - Mejorados para Mobile */}
+                <div className="flex items-center justify-center gap-2 w-full max-w-xs sm:absolute sm:top-0 sm:right-0 sm:w-auto mt-2 sm:mt-0">
+                    <Link href="/settings">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 hover:text-primary transition-all active:scale-95 shadow-sm border border-slate-200/50 dark:border-slate-800/50"
+                        >
+                            <SettingsIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </Button>
+                    </Link>
+                    <ImportDialog />
+                </div>
+
+                <div className="w-full max-w-md pt-2">
+                    <MonthSelectorWrapper initialDate={currentDate} />
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-4">
                     {/* Mensaje Motivacional de Objetivo */}
