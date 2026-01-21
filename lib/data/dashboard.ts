@@ -86,6 +86,11 @@ export interface MonthlyStat {
     investments: number;
 }
 
+export interface CategoryStat {
+    name: string;
+    value: number;
+}
+
 export async function getMonthlyStats(endDate: Date): Promise<MonthlyStat[]> {
     const stats: MonthlyStat[] = [];
 
@@ -163,4 +168,43 @@ export async function getYearlyStats(year: number): Promise<MonthlyStat[]> {
     }
 
     return stats;
+}
+
+export async function getCategoryStats(year: number, month?: number): Promise<CategoryStat[]> {
+    let query = supabase
+        .from("transacciones")
+        .select("monto, categoria, tipo");
+
+    if (month !== undefined) {
+        const date = new Date(year, month - 1, 1);
+        const start = format(startOfMonth(date), 'yyyy-MM-dd');
+        const end = format(endOfMonth(date), 'yyyy-MM-dd');
+        query = query.gte("fecha", start).lte("fecha", end);
+    } else {
+        const start = `${year}-01-01`;
+        const end = `${year}-12-31`;
+        query = query.gte("fecha", start).lte("fecha", end);
+    }
+
+    const { data: transactions, error } = await query;
+
+    if (error) {
+        console.error("Error fetching category stats:", error);
+        return [];
+    }
+
+    const categories: Record<string, number> = {};
+
+    transactions.forEach(t => {
+        // Only count expenses (negative values usually, or tipo != 'Ingreso')
+        // We exclude Inversión from general expenses distribution as requested in previous steps
+        if (t.tipo !== 'Ingreso' && t.tipo !== 'Inversión' && t.categoria !== 'Inversión') {
+            const amount = Math.abs(t.monto);
+            categories[t.categoria] = (categories[t.categoria] || 0) + amount;
+        }
+    });
+
+    return Object.entries(categories)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
 }

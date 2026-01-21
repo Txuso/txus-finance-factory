@@ -27,6 +27,7 @@ export function ImportDialog() {
     const [open, setOpen] = useState(false)
     const [file, setFile] = useState<File | null>(null)
     const [transactions, setTransactions] = useState<ParsedTransaction[]>([])
+    const [duplicates, setDuplicates] = useState<ParsedTransaction[]>([])
     const [isProcessing, setIsProcessing] = useState(false)
     const [step, setStep] = useState<'upload' | 'review'>('upload')
 
@@ -48,7 +49,8 @@ export function ImportDialog() {
         if (res.error || !res.data) {
             toast.error(res.error || "Error al leer el archivo");
         } else {
-            setTransactions(res.data);
+            setTransactions(res.data.transactions);
+            setDuplicates(res.data.duplicates);
             setStep('review');
         }
         setIsProcessing(false);
@@ -65,6 +67,7 @@ export function ImportDialog() {
             setStep('upload');
             setFile(null);
             setTransactions([]);
+            setDuplicates([]);
         }
         setIsProcessing(false);
     }
@@ -190,11 +193,52 @@ export function ImportDialog() {
                             </Table>
                         </div>
 
-                        <DialogFooter>
-                            <Button onClick={handleSave} disabled={isProcessing} className="w-full">
-                                {isProcessing ? "Guardando..." : "Confirmar e Importar"}
+                        <DialogFooter className="sticky bottom-0 bg-background pt-4 pb-2 border-t">
+                            <Button onClick={handleSave} disabled={isProcessing || transactions.length === 0} className="w-full">
+                                {isProcessing ? "Guardando..." : `Confirmar e Importar ${transactions.length} Movimientos`}
                             </Button>
                         </DialogFooter>
+
+                        {duplicates.length > 0 && (
+                            <div className="mt-8 space-y-4 opacity-70">
+                                <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-100 dark:border-amber-900/50">
+                                    <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-2">
+                                        <RotateCcw className="h-4 w-4" />
+                                        No añadiremos los siguientes gastos porque ya están registrados
+                                    </h4>
+                                    <p className="text-xs text-amber-700/70 dark:text-amber-500/70 mt-1">
+                                        Hemos detectado estos gastos fijos en este mismo mes dentro de tu historial.
+                                    </p>
+                                </div>
+
+                                <div className="border rounded-md overflow-x-auto bg-slate-50/50 dark:bg-slate-900/50">
+                                    <Table>
+                                        <TableHeader className="bg-slate-100/50 dark:bg-slate-800/50">
+                                            <TableRow>
+                                                <TableHead className="text-[10px] py-2">Fecha</TableHead>
+                                                <TableHead className="text-[10px] py-2">Descripción</TableHead>
+                                                <TableHead className="text-[10px] py-2 text-right">Monto</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {duplicates.map((t, i) => (
+                                                <TableRow key={`dup-${i}`} className="hover:bg-transparent">
+                                                    <TableCell className="text-[10px] py-1 text-muted-foreground">
+                                                        {format(new Date(t.fecha), 'dd/MM/yyyy')}
+                                                    </TableCell>
+                                                    <TableCell className="text-[10px] py-1 text-muted-foreground line-through">
+                                                        {t.descripcion}
+                                                    </TableCell>
+                                                    <TableCell className="text-[10px] py-1 text-right text-muted-foreground">
+                                                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(t.monto)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </DialogContent>

@@ -1,6 +1,6 @@
 export const CATEGORIAS = [
     'Vivienda',
-    'Alimentación',
+    'Supermercado',
     'Transporte',
     'Salud',
     'Educación',
@@ -11,7 +11,7 @@ export const CATEGORIAS = [
     'Inversión',
     'Otros',
     'Trabajo',
-    'VIdeojuegos'
+    'Videojuegos'
 ] as const;
 
 export type Categoria = typeof CATEGORIAS[number];

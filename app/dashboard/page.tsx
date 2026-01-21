@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { getDashboardData, getYearlyStats } from "@/lib/data/dashboard"
+import { getDashboardData, getYearlyStats, getCategoryStats } from "@/lib/data/dashboard"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
 import { TransactionForm } from "@/components/transactions/TransactionForm"
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardKPIs } from "@/components/dashboard/DashboardKPIs"
 import { PieChart, TrendingUp, Wallet, Settings as SettingsIcon } from "lucide-react"
 import Link from "next/link"
+import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -36,6 +37,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     // Estadísticas independientes
     const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
     const yearlyStats = await getYearlyStats(statsYear);
+    const categoryStats = await getCategoryStats(statsYear);
 
     const { transactions, recurringExpenses, config } = await getDashboardData(currentDate);
 
@@ -175,27 +177,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </TabsContent>
 
                 <TabsContent value="stats" className="mt-0">
-                    <div className="grid grid-cols-1 gap-8">
-                        <div className="space-y-6">
-                            <YearSelector currentYear={statsYear} />
-                            <MonthlyComparisonChart
-                                data={yearlyStats}
-                                title={`Resumen Anual ${statsYear}`}
-                                description={`Comparativa mensual de ingresos, gastos e inversiones durante el año ${statsYear}`}
-                            />
-                        </div>
+                    <div className="space-y-6">
+                        <YearSelector currentYear={statsYear} />
 
-                        <Card className="p-12 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-2 bg-slate-50/50">
-                            <div className="p-4 bg-white dark:bg-slate-800 rounded-full shadow-sm">
-                                <PieChart className="h-8 w-8 text-slate-400" />
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2">
+                                <MonthlyComparisonChart
+                                    data={yearlyStats}
+                                    title={`Comparativa Mensual ${statsYear}`}
+                                    description={`Ingresos vs Gastos vs Inversión en ${statsYear}`}
+                                />
                             </div>
-                            <div>
-                                <CardTitle className="text-sm">Más gráficos próximamente</CardTitle>
-                                <CardDescription className="max-w-xs mx-auto text-xs">
-                                    Estamos preparando visualizaciones de ahorro neto y tendencias de categorías.
-                                </CardDescription>
+                            <div className="lg:col-span-1">
+                                <CategoryPieChart
+                                    data={categoryStats}
+                                    title={`Distribución de Gastos ${statsYear}`}
+                                    description={`Reparto por categorías en el año ${statsYear}`}
+                                />
                             </div>
-                        </Card>
+                        </div>
                     </div>
                 </TabsContent>
             </Tabs>

@@ -12,15 +12,62 @@ export interface ParsedTransaction {
 function guessCategory(description: string): Categoria {
     const desc = description.toUpperCase();
 
-    if (desc.includes('MERCADONA') || desc.includes('EROSKI') || desc.includes('SUPERMERCADO') || desc.includes('LIDL')) return 'Alimentación';
-    if (desc.includes('REPSOL') || desc.includes('CEPSA') || desc.includes('GASOLINERA') || desc.includes('BP')) return 'Transporte';
-    if (desc.includes('FARMACIA')) return 'Salud';
+    // Trabajo / Ingresos
+    if (desc.includes('NOMINA')) return 'Trabajo';
+
+    // Inversiones
+    if (desc.includes('INDEXA') || desc.includes('REVOLUT')) return 'Inversión';
+
+    // Supermercado
+    if (desc.includes('MERCADONA') || desc.includes('COALIMENT') || desc.includes('MARKET') ||
+        desc.includes('EROSKI') || desc.includes('LIDL') || desc.includes('SUPERMERCADO')) return 'Supermercado';
+
+    // Transporte
+    if (desc.includes('REPSOL') || desc.includes('CEPSA') || desc.includes('GASOLINERA') ||
+        desc.includes('BP') || desc.includes('EMPALME')) return 'Transporte';
+
+    // Vivienda (Gastos fijos/Hogar)
+    if (desc.includes('CUOTA PTMO') || desc.includes('GASTOS PISO GERB') || desc.includes('COMUNITAT JOSU MENSUAL')) return 'Vivienda';
+
+    // Videojuegos
+    if (desc.includes('NINTENDO') || desc.includes('XTRALIFE')) return 'Videojuegos';
+
+    // Ocio
+    if (desc.includes('AMZN') || desc.includes('AMAZON') || desc.includes('WALLAPOP')) return 'Ocio';
+
+    // Suscripciones
     if (desc.includes('NETFLIX') || desc.includes('SPOTIFY') || desc.includes('HBO') || desc.includes('PRIME')) return 'Suscripciones';
+
+    // Comunicaciones
     if (desc.includes('VODAFONE') || desc.includes('MOVISTAR') || desc.includes('O2') || desc.includes('DIGI')) return 'Comunicaciones';
-    if (desc.includes('NOMINA') || desc.includes('INGRESO') || desc.includes('TRANSFERENCIA A FAVOR')) return 'Otros';
-    if (desc.includes('AMAZON')) return 'Ocio';
+
+    // Otros
+    if (desc.includes('FARMACIA')) return 'Salud';
+    if (desc.includes('TRANSF. MANGOPAY') || desc.includes('APLAZAME')) return 'Otros';
+    if (desc.includes('INGRESO') || desc.includes('TRANSFERENCIA A FAVOR')) return 'Otros';
 
     return 'Otros';
+}
+
+function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' {
+    const desc = description.toUpperCase();
+
+    if (amount > 0) return 'Ingreso';
+
+    // Ingresos específicos por nombre (aunque el monto debería ser > 0, por si acaso)
+    if (desc.includes('NOMINA') || desc.includes('TRANSF. MANGOPAY')) return 'Ingreso';
+
+    // Gastos fijos
+    if (
+        desc.includes('CUOTA PTMO') ||
+        desc.includes('GASTOS PISO GERB') ||
+        desc.includes('APLAZAME') ||
+        desc.includes('COMUNITAT JOSU MENSUAL')
+    ) {
+        return 'Gasto fijo';
+    }
+
+    return 'Gasto variable';
 }
 
 export async function parseBankStatement(buffer: Buffer): Promise<ParsedTransaction[]> {
@@ -89,14 +136,12 @@ export async function parseBankStatement(buffer: Buffer): Promise<ParsedTransact
                         description = description.trim();
 
                         if (description.length > 2) {
-                            const isExpense = amount < 0;
-
                             transactions.push({
                                 fecha: date,
                                 descripcion: description,
                                 monto: amount,
                                 categoria: guessCategory(description),
-                                tipo: isExpense ? 'Gasto variable' : 'Ingreso'
+                                tipo: guessType(description, amount)
                             });
                         }
                     }

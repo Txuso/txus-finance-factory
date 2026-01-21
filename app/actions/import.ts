@@ -1,7 +1,8 @@
 "use server"
 
-import { parseBankStatement } from "@/lib/parsers/pdf-parser";
+import { parseBankStatement, ParsedTransaction } from "@/lib/parsers/pdf-parser";
 import { revalidatePath } from "next/cache";
+import { startOfMonth } from "date-fns";
 
 export async function parseUpload(formData: FormData) {
     const file = formData.get("file") as File;
@@ -18,32 +19,82 @@ export async function parseUpload(formData: FormData) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        let transactions = await parseBankStatement(buffer);
+        let allParsed = await parseBankStatement(buffer);
 
-        // ENHANCEMENT: Detect Fixed Expenses
+        if (allParsed.length === 0) {
+            return { success: true, data: { transactions: [], duplicates: [] } };
+        }
+
+        // Deduplicate logic
+        // 1. Get range of months from the parsed PDF
+        const dates = allParsed.map(t => new Date(t.fecha));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+        // Start of month for the range
+        const start = startOfMonth(minDate).toISOString();
+        const end = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0).toISOString();
+
+        // 2. Fetch existing transactions for those months
+        const { data: existingTransactions } = await supabase
+            .from('transacciones')
+            .select('descripcion, fecha, monto, tipo')
+            .gte('fecha', start)
+            .lte('fecha', end);
+
+        // 3. Enhancement: Detect Fixed Expenses from definitions
         const { data: recurringList } = await supabase
             .from('gastos_recurrentes')
             .select('*')
             .eq('activo', true);
 
-        if (recurringList && recurringList.length > 0) {
-            transactions = transactions.map(t => {
-                const match = recurringList.find(r =>
+        const transactions: ParsedTransaction[] = [];
+        const duplicates: ParsedTransaction[] = [];
+
+        for (const t of allParsed) {
+            let processed = t;
+
+            // Apply templates if matches
+            if (recurringList && recurringList.length > 0) {
+                const matchTemplate = recurringList.find(r =>
                     t.descripcion.toUpperCase().includes(r.descripcion.toUpperCase())
                 );
 
-                if (match) {
-                    return {
+                if (matchTemplate) {
+                    processed = {
                         ...t,
                         tipo: 'Gasto fijo' as const,
-                        categoria: match.categoria
+                        categoria: matchTemplate.categoria
                     };
                 }
-                return t;
-            });
+            }
+
+            // DUPLICATE CHECK (Only for Fixed Expenses as requested)
+            if (processed.tipo === 'Gasto fijo' && existingTransactions) {
+                const isDuplicate = existingTransactions.some(existing => {
+                    // Normalize descriptions for comparison
+                    const descNorm = processed.descripcion.toUpperCase();
+                    const existNorm = existing.descripcion.toUpperCase();
+
+                    // Same month and similar description
+                    const sameMonth = startOfMonth(new Date(processed.fecha)).getTime() === startOfMonth(new Date(existing.fecha)).getTime();
+
+                    // Check if one contains the other (simple similarity)
+                    const similarDesc = descNorm.includes(existNorm) || existNorm.includes(descNorm);
+
+                    return sameMonth && similarDesc;
+                });
+
+                if (isDuplicate) {
+                    duplicates.push(processed);
+                    continue; // Skip adding to main list
+                }
+            }
+
+            transactions.push(processed);
         }
 
-        return { success: true, data: transactions };
+        return { success: true, data: { transactions, duplicates } };
     } catch (error) {
         console.error("Error parsing file:", error);
         return { error: "Error al procesar el archivo PDF" };
@@ -52,7 +103,6 @@ export async function parseUpload(formData: FormData) {
 
 // Bulk insert action
 import { supabase } from "@/lib/supabase/client";
-import { ParsedTransaction } from "@/lib/parsers/pdf-parser";
 import { redirect } from "next/navigation";
 
 export async function saveImportedTransactions(transactions: ParsedTransaction[]) {

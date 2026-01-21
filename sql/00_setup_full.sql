@@ -4,9 +4,9 @@ create extension if not exists "uuid-ossp";
 -- 1. ENUMS (Tipos de datos personalizados)
 DO $$ BEGIN
     CREATE TYPE categoria_enum AS ENUM (
-      'Vivienda', 'Alimentación', 'Transporte', 'Salud', 
+      'Vivienda', 'Supermercado', 'Transporte', 'Salud', 
       'Educación', 'Ocio', 'Comunicaciones', 'Suscripciones', 
-      'Imprevistos', 'Inversión', 'Otros', 'Trabajo', 'VIdeojuegos'
+      'Imprevistos', 'Inversión', 'Otros', 'Trabajo', 'Videojuegos'
     );
 EXCEPTION
     WHEN duplicate_object THEN null;
