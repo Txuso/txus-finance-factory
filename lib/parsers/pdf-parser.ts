@@ -65,6 +65,7 @@ function guessType(description: string, amount: number): 'Gasto variable' | 'Gas
         desc.includes('CUOTA PTMO') ||
         desc.includes('GASTOS PISO GERB') ||
         desc.includes('APLAZAME') ||
+        desc.includes('CETELEM') ||
         desc.includes('COMUNITAT JOSU MENSUAL')
     ) {
         return 'Gasto fijo';
@@ -107,10 +108,22 @@ export async function parseBankStatement(buffer: Buffer): Promise<ParsedTransact
                         // Timezone fix: Set to 12:00 PM
                         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
 
-                        // LOGIC: Take the FIRST match always. 
-                        // The Bank Statement format is usually: Date - Description - Amount - Balance
-                        // So the first number is the Amount.
-                        const targetMatch = amountMatches[1];
+                        // IMPROVED LOGIC: Pick the correct amount match
+                        // In bank statements, the first number is usually the Amount and the second is the Balance.
+                        // However, sometimes there's a Reference or other number before.
+                        // Amounts (expenses) are often negative, which is a strong indicator.
+                        let targetMatch = amountMatches[0];
+                        if (amountMatches.length > 1) {
+                            // 1. Check if any match has a negative sign (definitely an expense)
+                            const signedMatch = amountMatches.find(m => /[-\u2212\u2013\u2014]/.test(m[0]));
+                            if (signedMatch) {
+                                targetMatch = signedMatch;
+                            } else {
+                                // 2. If no negative sign, it's likely an income.
+                                // The Balance is usually the LAST number, so the Amount is the one BEFORE it.
+                                targetMatch = amountMatches[amountMatches.length - 2];
+                            }
+                        }
 
                         // Normalize Amount String
                         let amountStr = targetMatch[1]
