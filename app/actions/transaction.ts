@@ -21,7 +21,7 @@ export async function createTransaction(data: TransactionFormValues) {
 
     // If it's a "Gasto fijo", we also want to ensure it exists in gastos_recurrentes
     if (validatedFields.data.tipo === 'Gasto fijo') {
-        const { meses_aplicacion, ...baseData } = validatedFields.data;
+        const { meses_aplicacion, fecha_inicio, fecha_fin, ...baseData } = validatedFields.data;
 
         // 1. Check if it already exists in recurrentes (by description match)
         const { data: existing } = await supabase
@@ -39,12 +39,12 @@ export async function createTransaction(data: TransactionFormValues) {
             };
 
             // Only update start date if provided or if it helps consistency
-            if (baseData.fecha_inicio) {
-                updateData.fecha_inicio = format(baseData.fecha_inicio, 'yyyy-MM-dd');
+            if (fecha_inicio) {
+                updateData.fecha_inicio = format(fecha_inicio, 'yyyy-MM-dd');
             }
 
             // Handle end date (could be null)
-            updateData.fecha_fin = baseData.fecha_fin ? format(baseData.fecha_fin, 'yyyy-MM-dd') : null;
+            updateData.fecha_fin = fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null;
 
             await supabase
                 .from("gastos_recurrentes")
@@ -60,8 +60,8 @@ export async function createTransaction(data: TransactionFormValues) {
                     monto_estimado: Math.abs(baseData.monto),
                     categoria: baseData.categoria,
                     dia_cobro_estimado: new Date(baseData.fecha).getDate(),
-                    fecha_inicio: format(baseData.fecha_inicio || startOfMonth(new Date(baseData.fecha)), 'yyyy-MM-dd'),
-                    fecha_fin: baseData.fecha_fin ? format(baseData.fecha_fin, 'yyyy-MM-dd') : null,
+                    fecha_inicio: format(fecha_inicio || startOfMonth(new Date(baseData.fecha)), 'yyyy-MM-dd'),
+                    fecha_fin: fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null,
                     activo: true
                 }]);
         }
@@ -121,8 +121,8 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
                     monto_estimado: Math.abs(baseData.monto),
                     categoria: baseData.categoria,
                     dia_cobro_estimado: new Date(baseData.fecha).getDate(),
-                    fecha_inicio: baseData.fecha_inicio ? format(baseData.fecha_inicio, 'yyyy-MM-dd') : undefined,
-                    fecha_fin: baseData.fecha_fin ? format(baseData.fecha_fin, 'yyyy-MM-dd') : null,
+                    fecha_inicio: fecha_inicio ? format(fecha_inicio, 'yyyy-MM-dd') : undefined,
+                    fecha_fin: fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null,
                 })
                 .eq("id", existing.id)
                 .eq("user_id", user.id);
