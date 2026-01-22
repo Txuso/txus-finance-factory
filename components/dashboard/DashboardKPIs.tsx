@@ -15,19 +15,19 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
     const isPositive = savings >= 0
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             {/* CARD PRINCIPAL - AHORRO */}
             <Card className={`overflow-hidden border-0 shadow-md transition-colors ${isPositive
                 ? "bg-gradient-to-br from-indigo-500 to-purple-600"
                 : "bg-gradient-to-br from-orange-500 to-rose-600"
                 } text-white`}>
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-3 sm:p-4">
                     <div className="flex justify-between items-start">
                         <div>
                             <p className={`${isPositive ? "text-indigo-100" : "text-orange-100"} text-[10px] font-medium uppercase tracking-wider`}>
                                 Ahorro Mes
                             </p>
-                            <h2 className="text-xl sm:text-2xl font-bold mt-1">
+                            <h2 className="text-xl sm:text-2xl font-bold mt-0.5">
                                 {formatCurrency(savings)}
                             </h2>
                         </div>
@@ -40,11 +40,11 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
 
             {/* INGRESOS */}
             <Card className="border-0 shadow-md bg-white dark:bg-slate-900 transition-all hover:scale-105 active:scale-95 cursor-pointer">
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-3 sm:p-4">
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Ingresos</p>
-                            <h3 className="text-lg sm:text-xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                            <h3 className="text-lg sm:text-xl font-bold mt-0.5 text-emerald-600 dark:text-emerald-400">
                                 {formatCurrency(totalIncome)}
                             </h3>
                         </div>
@@ -57,7 +57,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
 
             {/* GASTOS */}
             <Card className="border-0 shadow-md bg-white dark:bg-slate-900 transition-all hover:scale-105 active:scale-95 cursor-pointer">
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-3 sm:p-4">
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Gastos</p>
@@ -74,7 +74,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
 
             {/* INVERSIONES (INFORMATIVO) */}
             <Card className="border-0 shadow-md bg-white dark:bg-slate-900 transition-all hover:scale-105 active:scale-95 cursor-pointer">
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-3 sm:p-4">
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Inversión</p>

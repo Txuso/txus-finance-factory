@@ -31,29 +31,26 @@ export function ImportDialog() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [step, setStep] = useState<'upload' | 'review'>('upload')
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0])
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            setIsProcessing(true);
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
+            const res = await parseUpload(formData);
+
+            if (res.error || !res.data) {
+                toast.error(res.error || "Error al leer el archivo");
+                setFile(null);
+            } else {
+                setTransactions(res.data.transactions);
+                setDuplicates(res.data.duplicates);
+                setStep('review');
+            }
+            setIsProcessing(false);
         }
-    }
-
-    const handleUpload = async () => {
-        if (!file) return;
-
-        setIsProcessing(true);
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await parseUpload(formData);
-
-        if (res.error || !res.data) {
-            toast.error(res.error || "Error al leer el archivo");
-        } else {
-            setTransactions(res.data.transactions);
-            setDuplicates(res.data.duplicates);
-            setStep('review');
-        }
-        setIsProcessing(false);
     }
 
     const handleSave = async () => {
@@ -128,16 +125,25 @@ export function ImportDialog() {
 
                 {step === 'upload' && (
                     <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg space-y-4">
-                        <FileText className="h-12 w-12 text-muted-foreground" />
-                        <Input
-                            type="file"
-                            accept=".pdf"
-                            onChange={handleFileChange}
-                            className="max-w-sm"
-                        />
-                        <Button onClick={handleUpload} disabled={!file || isProcessing}>
-                            {isProcessing ? "Procesando..." : "Analizar PDF"}
-                        </Button>
+                        {isProcessing ? (
+                            <div className="flex flex-col items-center gap-3">
+                                <RotateCcw className="h-12 w-12 text-blue-500 animate-spin" />
+                                <p className="text-sm font-medium animate-pulse">Analizando extracto...</p>
+                            </div>
+                        ) : (
+                            <>
+                                <FileText className="h-12 w-12 text-muted-foreground" />
+                                <div className="text-center">
+                                    <p className="text-sm font-medium mb-2">Selecciona tu extracto en PDF</p>
+                                    <Input
+                                        type="file"
+                                        accept=".pdf"
+                                        onChange={handleFileChange}
+                                        className="max-w-sm cursor-pointer"
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
 

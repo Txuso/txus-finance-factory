@@ -91,10 +91,10 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             {/* TABLA DE GASTOS FIJOS */}
             <Card className="border-l-4 border-l-blue-500 shadow-md">
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-1">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-blue-500" />
@@ -105,12 +105,12 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         </span>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 sm:p-6">
+                <CardContent className="p-0 sm:p-4">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Concepto</TableHead>
+                                    <TableHead className="py-2.5">Concepto</TableHead>
                                     <TableHead>Descripción</TableHead>
                                     <TableHead className="text-right">Importe</TableHead>
                                     <TableHead className="w-[100px]"></TableHead>
@@ -126,18 +126,18 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
 
                                     return (
                                         <>
-                                            {displayedFixed.map((item, idx) => {
+                                            {displayedFixed.map((item) => {
                                                 if (item.type === 'definition') {
                                                     const def = item.data as typeof fixedExpensesList[0];
                                                     return (
                                                         <TableRow key={`def-${def.definition.id}`}>
-                                                            <TableCell className="font-medium text-slate-700 dark:text-slate-200">
+                                                            <TableCell className="py-2 font-medium text-slate-700 dark:text-slate-200">
                                                                 {def.definition.descripcion}
                                                             </TableCell>
-                                                            <TableCell className="text-xs text-muted-foreground italic">
+                                                            <TableCell className="py-2 text-xs text-muted-foreground italic">
                                                                 {def.transaction?.descripcion || "-"}
                                                             </TableCell>
-                                                            <TableCell className="text-right">
+                                                            <TableCell className="py-2 text-right">
                                                                 {def.transaction ? (
                                                                     <span className="font-bold text-slate-900 dark:text-slate-100">
                                                                         {formatCurrency(Math.abs(def.transaction.monto))}
@@ -148,7 +148,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                                     </span>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell>
+                                                            <TableCell className="py-2">
                                                                 <TransactionActionsInner transaction={def.transaction} recurring={def.definition} />
                                                             </TableCell>
                                                         </TableRow>
@@ -157,10 +157,10 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                     const t = item.data as typeof extraFixedExpenses[0];
                                                     return (
                                                         <TableRow key={`extra-${t.id}`} className="bg-slate-50/50">
-                                                            <TableCell className="font-medium text-slate-600 italic">{t.descripcion}</TableCell>
-                                                            <TableCell className="text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
-                                                            <TableCell className="text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
-                                                            <TableCell>
+                                                            <TableCell className="py-2 font-medium text-slate-600 italic">{t.descripcion}</TableCell>
+                                                            <TableCell className="py-2 text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
+                                                            <TableCell className="py-2 text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
+                                                            <TableCell className="py-2">
                                                                 <TransactionActionsInner transaction={t} />
                                                             </TableCell>
                                                         </TableRow>
@@ -197,7 +197,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
 
             {/* TABLA DE GASTOS VARIABLES */}
             <Card className="border-l-4 border-l-rose-500 shadow-md">
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-1">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-rose-500" />
@@ -208,7 +208,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         </span>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 sm:p-6">
+                <CardContent className="p-0 sm:p-4">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
@@ -231,19 +231,19 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                     <>
                                         {(isVariablesExpanded ? variableExpenses : variableExpenses.slice(0, 5)).map((t) => (
                                             <TableRow key={t.id}>
-                                                <TableCell className="text-muted-foreground text-xs sm:text-sm">
+                                                <TableCell className="py-2 text-muted-foreground text-xs sm:text-sm">
                                                     {format(new Date(t.fecha), 'dd/MM')}
                                                 </TableCell>
-                                                <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="py-2 font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
+                                                <TableCell className="py-2">
                                                     <Badge variant="outline" className="text-[10px] sm:text-xs">
                                                         {t.categoria}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right font-bold text-rose-600 text-xs sm:text-sm">
+                                                <TableCell className="py-2 text-right font-bold text-rose-600 text-xs sm:text-sm">
                                                     {formatCurrency(Math.abs(t.monto))}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="py-2">
                                                     <TransactionActionsInner transaction={t} />
                                                 </TableCell>
                                             </TableRow>
@@ -275,73 +275,75 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
             </Card>
 
             {/* TABLA DE INVERSIONES */}
-            {investmentTransactions.length > 0 && (
-                <Card className="border-l-4 border-l-blue-400 shadow-md">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center justify-between">
-                            <span className="flex items-center gap-2">
-                                <TrendingDown className="h-5 w-5 text-blue-400" />
-                                Inversiones / Ahorro activo
-                            </span>
-                            <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
-                                {formatCurrency(totalInvestments)}
-                            </span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0 sm:p-6">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[100px]">Fecha</TableHead>
-                                        <TableHead>Descripción</TableHead>
-                                        <TableHead className="text-right">Monto</TableHead>
-                                        <TableHead className="w-[100px]"></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {(isInvestmentsExpanded ? investmentTransactions : investmentTransactions.slice(0, 5)).map((t) => (
-                                        <TableRow key={t.id} className="bg-blue-50/10">
-                                            <TableCell className="text-muted-foreground text-xs sm:text-sm">
-                                                {format(new Date(t.fecha), 'dd/MM')}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
-                                            <TableCell className="text-right font-bold text-blue-600 dark:text-blue-400 text-xs sm:text-sm">
-                                                {formatCurrency(Math.abs(t.monto))}
-                                            </TableCell>
-                                            <TableCell>
-                                                <TransactionActionsInner transaction={t} />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {investmentTransactions.length > 5 && (
+            {
+                investmentTransactions.length > 0 && (
+                    <Card className="border-l-4 border-l-blue-400 shadow-md">
+                        <CardHeader className="pb-1">
+                            <CardTitle className="text-lg flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <TrendingDown className="h-5 w-5 text-blue-400" />
+                                    Inversiones / Ahorro activo
+                                </span>
+                                <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                                    {formatCurrency(totalInvestments)}
+                                </span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0 sm:p-4">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center p-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setIsInvestmentsExpanded(!isInvestmentsExpanded)}
-                                                    className="w-full text-muted-foreground hover:text-foreground text-xs"
-                                                >
-                                                    {isInvestmentsExpanded ? (
-                                                        <span className="flex items-center gap-2 justify-center">Ver menos <ChevronUp className="h-4 w-4" /></span>
-                                                    ) : (
-                                                        <span className="flex items-center gap-2 justify-center">Ver {investmentTransactions.length - 5} más <ChevronDown className="h-4 w-4" /></span>
-                                                    )}
-                                                </Button>
-                                            </TableCell>
+                                            <TableHead className="w-[100px]">Fecha</TableHead>
+                                            <TableHead>Descripción</TableHead>
+                                            <TableHead className="text-right">Monto</TableHead>
+                                            <TableHead className="w-[100px]"></TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {(isInvestmentsExpanded ? investmentTransactions : investmentTransactions.slice(0, 5)).map((t) => (
+                                            <TableRow key={t.id} className="bg-blue-50/10">
+                                                <TableCell className="py-2 text-muted-foreground text-xs sm:text-sm">
+                                                    {format(new Date(t.fecha), 'dd/MM')}
+                                                </TableCell>
+                                                <TableCell className="py-2 font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
+                                                <TableCell className="py-2 text-right font-bold text-blue-600 dark:text-blue-400 text-xs sm:text-sm">
+                                                    {formatCurrency(Math.abs(t.monto))}
+                                                </TableCell>
+                                                <TableCell className="py-2">
+                                                    <TransactionActionsInner transaction={t} />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {investmentTransactions.length > 5 && (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center p-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setIsInvestmentsExpanded(!isInvestmentsExpanded)}
+                                                        className="w-full text-muted-foreground hover:text-foreground text-xs"
+                                                    >
+                                                        {isInvestmentsExpanded ? (
+                                                            <span className="flex items-center gap-2 justify-center">Ver menos <ChevronUp className="h-4 w-4" /></span>
+                                                        ) : (
+                                                            <span className="flex items-center gap-2 justify-center">Ver {investmentTransactions.length - 5} más <ChevronDown className="h-4 w-4" /></span>
+                                                        )}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )
+            }
 
             {/* TABLA DE INGRESOS */}
             <Card className="border-l-4 border-l-emerald-500 shadow-md">
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-1">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-emerald-500 rotate-180" />
@@ -352,7 +354,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         </span>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 sm:p-6">
+                <CardContent className="p-0 sm:p-4">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
@@ -375,17 +377,17 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                     <>
                                         {(isIncomeExpanded ? incomeTransactions : incomeTransactions.slice(0, 5)).map((t) => (
                                             <TableRow key={t.id}>
-                                                <TableCell className="text-muted-foreground text-xs sm:text-sm">
+                                                <TableCell className="py-2 text-muted-foreground text-xs sm:text-sm">
                                                     {format(new Date(t.fecha), 'dd/MM')}
                                                 </TableCell>
-                                                <TableCell className="font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="py-2 font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
+                                                <TableCell className="py-2">
                                                     <Badge variant="outline" className="text-[10px] sm:text-xs border-emerald-200 text-emerald-700 bg-emerald-50">{t.categoria}</Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right font-bold text-emerald-600 text-xs sm:text-sm">
+                                                <TableCell className="py-2 text-right font-bold text-emerald-600 text-xs sm:text-sm">
                                                     {formatCurrency(Math.abs(t.monto))}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="py-2">
                                                     <TransactionActionsInner transaction={t} />
                                                 </TableCell>
                                             </TableRow>
@@ -415,7 +417,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 }
 

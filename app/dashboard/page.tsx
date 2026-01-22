@@ -50,7 +50,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     else greeting = "Buenas noches";
 
     return (
-        <div className="container mx-auto py-6 sm:py-10 space-y-6 sm:space-y-8">
+        <div className="container mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
             <div className="flex flex-col items-center space-y-4 relative px-4 text-center transition-all duration-300">
                 {/* Saludo y Nombre */}
                 <p className="text-xs sm:text-sm font-semibold text-muted-foreground/80 italic tracking-wide animate-in fade-in slide-in-from-top-2 duration-700">
@@ -163,27 +163,26 @@ async function DashboardContent({
     const savingsNeeded = (totalIncome * targetPercentage) - actualSavings;
 
     return (
-        <div className="space-y-6 sm:space-y-8">
-            <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-4">
+        <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col items-center space-y-2 text-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-2">
                     {/* Mensaje Motivacional de Objetivo */}
                     <div className={cn(
-                        "flex items-center justify-center p-6 rounded-3xl border transition-all duration-500 shadow-sm",
+                        "flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-500 shadow-sm",
                         isObjectiveMet
                             ? "bg-emerald-50/50 border-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-300"
                             : "bg-slate-50/50 border-slate-200 text-slate-600 dark:bg-slate-900/20 dark:border-slate-800"
                     )}>
-                        <p className="text-sm font-medium leading-relaxed">
+                        <p className="text-xs sm:text-sm font-medium leading-tight">
                             {isObjectiveMet ? (
                                 <>
-                                    <span className="font-extrabold text-lg block mb-1 italic">¡BRUTAL {firstName.toUpperCase()}! 🚀</span>
-                                    Estás ahorrando un <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>.
-                                    Objetivo superado.
+                                    <span className="font-extrabold text-base block italic">¡BRUTAL {firstName.toUpperCase()}! 🚀</span>
+                                    Ahorro: <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>. Meta OK.
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-bold block mb-1 uppercase tracking-tight">VAMOS {firstName.toUpperCase()} 💪</span>
-                                    Te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para llegar a tu objetivo.
+                                    <span className="font-bold block uppercase tracking-tight">VAMOS {firstName.toUpperCase()} 💪</span>
+                                    Te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span>
                                 </>
                             )}
                         </p>
@@ -204,7 +203,7 @@ async function DashboardContent({
             />
 
             <Tabs defaultValue="summary" className="w-full">
-                <div className="flex items-center justify-center mb-10">
+                <div className="flex items-center justify-center mb-6">
                     <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-sm p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/50 h-auto">
                         <TabsTrigger
                             value="summary"
