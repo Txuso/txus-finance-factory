@@ -169,21 +169,28 @@ async function DashboardContent({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-2">
                     {/* Mensaje Motivacional de Objetivo */}
                     <div className={cn(
-                        "flex items-center justify-center p-2.5 rounded-2xl border transition-all duration-500 shadow-sm",
+                        "flex items-center justify-center p-4 rounded-2xl border transition-all duration-500 shadow-xl relative overflow-hidden group",
                         isObjectiveMet
-                            ? "bg-emerald-50/50 border-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-300"
-                            : "bg-slate-50/50 border-slate-200 text-slate-600 dark:bg-slate-900/20 dark:border-slate-800"
+                            ? "bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-800 dark:text-emerald-300 shadow-emerald-500/5"
+                            : "bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border-slate-200/50 text-slate-700 dark:text-slate-300"
                     )}>
-                        <p className="text-xs sm:text-sm font-medium leading-tight">
+                        {isObjectiveMet && (
+                            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 blur-2xl animate-pulse" />
+                        )}
+                        <p className="text-sm sm:text-base font-medium leading-tight relative z-10">
                             {isObjectiveMet ? (
                                 <>
-                                    <span className="font-extrabold text-base block italic">¡BRUTAL {firstName.toUpperCase()}! 🚀</span>
-                                    Ahorro: <span className="underline decoration-wavy underline-offset-4 decoration-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>. Meta OK.
+                                    <span className="font-black text-xl sm:text-2xl block italic tracking-tighter uppercase mb-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-emerald-200 bg-clip-text text-transparent">
+                                        ¡BRUTAL {firstName.toUpperCase()}! 🚀
+                                    </span>
+                                    Tu ahorro es del <span className="font-black text-emerald-600 dark:text-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>. Meta superada con creces.
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-bold block uppercase tracking-tight">VAMOS {firstName.toUpperCase()} 💪</span>
-                                    Te faltan <span className="font-bold text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span>
+                                    <span className="font-black text-xl sm:text-2xl block uppercase tracking-tighter mb-1 text-slate-400">
+                                        VAMOS {firstName.toUpperCase()} 💪
+                                    </span>
+                                    Enfoque total. Te faltan <span className="font-black text-rose-500 dark:text-rose-400">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para el objetivo.
                                 </>
                             )}
                         </p>

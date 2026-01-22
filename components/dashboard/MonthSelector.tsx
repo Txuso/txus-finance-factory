@@ -30,7 +30,7 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
 
     return (
         <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-1 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50 p-1 rounded-full shadow-lg max-w-full overflow-x-auto no-scrollbar justify-center">
+            <div className="flex items-center gap-1 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white dark:border-slate-800 p-1.5 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] max-w-full overflow-x-auto no-scrollbar justify-center">
                 {months.map((date, index) => {
                     const isSelected = index === 6;
                     const today = isToday(date);
@@ -42,10 +42,10 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                             size="sm"
                             onClick={() => onMonthChange(date)}
                             className={cn(
-                                "h-11 px-3 rounded-full transition-all duration-300 flex flex-col items-center justify-center gap-0 relative shrink-0 cursor-pointer hover:scale-110",
+                                "h-11 px-3 rounded-full transition-all duration-300 flex flex-col items-center justify-center gap-0 relative shrink-0 cursor-pointer overflow-hidden",
                                 isSelected
-                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:from-blue-700 hover:to-indigo-700 min-w-[110px] z-10"
-                                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-white/50 dark:hover:bg-slate-800/50 min-w-[75px]",
+                                    ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 min-w-[110px] z-10"
+                                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 min-w-[75px] hover:scale-110",
                                 // Responsive visibility dynamic
                                 !isSelected && Math.abs(index - 6) >= 1 && "hidden sm:flex",
                                 !isSelected && Math.abs(index - 6) >= 2 && "hidden md:flex",
@@ -62,12 +62,15 @@ export function MonthSelector({ currentDate, onMonthChange }: MonthSelectorProps
                             </span>
                             <span className={cn(
                                 "text-sm font-bold capitalize leading-none",
-                                isSelected ? "text-white" : "text-slate-600 dark:text-slate-300"
+                                isSelected ? "text-white" : "text-slate-600 dark:text-slate-200"
                             )}>
                                 {format(date, "MMM", { locale: es })}
                             </span>
                             {today && !isSelected && (
-                                <div className="absolute top-1 right-2 w-1.5 h-1.5 bg-blue-500 rounded-full border border-white dark:border-slate-900" />
+                                <div className="absolute top-1 right-2 w-1.5 h-1.5 bg-blue-500 rounded-full border border-white dark:border-slate-900 shadow-sm" />
+                            )}
+                            {isSelected && (
+                                <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
                             )}
                         </Button>
                     );

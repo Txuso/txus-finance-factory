@@ -93,15 +93,20 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
     return (
         <div className="space-y-6">
             {/* TABLA DE GASTOS FIJOS */}
-            <Card className="border-l-4 border-l-blue-500 shadow-md">
+            <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm overflow-hidden relative group transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
+                {/* Side accent glow */}
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+
                 <CardHeader className="pb-1">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
-                            <TrendingDown className="h-5 w-5 text-blue-500" />
-                            Gastos Fijos
+                            <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <TrendingDown className="h-4 w-4 text-blue-500" />
+                            </div>
+                            <span className="font-bold tracking-tight">Gastos Fijos</span>
                             <QuickAddButton tipo="Gasto fijo" />
                         </span>
-                        <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                        <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
                             {formatCurrency(totalFixed)}
                         </span>
                     </CardTitle>
@@ -197,15 +202,20 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
             </Card>
 
             {/* TABLA DE GASTOS VARIABLES */}
-            <Card className="border-l-4 border-l-rose-500 shadow-md">
+            <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm overflow-hidden relative group transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
+                {/* Side accent glow */}
+                <div className="absolute top-0 left-0 w-1 h-full bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+
                 <CardHeader className="pb-1">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
-                            <TrendingDown className="h-5 w-5 text-rose-500" />
-                            Gastos Variables
+                            <div className="p-1.5 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
+                                <TrendingDown className="h-4 w-4 text-rose-500" />
+                            </div>
+                            <span className="font-bold tracking-tight">Gastos Variables</span>
                             <QuickAddButton tipo="Gasto variable" />
                         </span>
-                        <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                        <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
                             {formatCurrency(totalVariable)}
                         </span>
                     </CardTitle>
@@ -279,15 +289,20 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
             {/* TABLA DE INVERSIONES */}
             {
                 investmentTransactions.length > 0 && (
-                    <Card className="border-l-4 border-l-blue-400 shadow-md">
+                    <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm overflow-hidden relative group transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
+                        {/* Side accent glow */}
+                        <div className="absolute top-0 left-0 w-1 h-full bg-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.5)]" />
+
                         <CardHeader className="pb-1">
                             <CardTitle className="text-lg flex items-center justify-between">
                                 <span className="flex items-center gap-2">
-                                    <TrendingDown className="h-5 w-5 text-blue-400" />
-                                    Inversiones / Ahorro activo
+                                    <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                        <TrendingDown className="h-4 w-4 text-blue-400" />
+                                    </div>
+                                    <span className="font-bold tracking-tight">Inversiones / Ahorro activo</span>
                                     <QuickAddButton tipo="Inversión" />
                                 </span>
-                                <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                                <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
                                     {formatCurrency(totalInvestments)}
                                 </span>
                             </CardTitle>
@@ -345,15 +360,20 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
             }
 
             {/* TABLA DE INGRESOS */}
-            <Card className="border-l-4 border-l-emerald-500 shadow-md">
+            <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm overflow-hidden relative group transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
+                {/* Side accent glow */}
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+
                 <CardHeader className="pb-1">
                     <CardTitle className="text-lg flex items-center justify-between">
                         <span className="flex items-center gap-2">
-                            <TrendingDown className="h-5 w-5 text-emerald-500 rotate-180" />
-                            Ingresos
+                            <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                                <TrendingDown className="h-4 w-4 text-emerald-500 rotate-180" />
+                            </div>
+                            <span className="font-bold tracking-tight">Ingresos</span>
                             <QuickAddButton tipo="Ingreso" />
                         </span>
-                        <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                        <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
                             {formatCurrency(totalIncome)}
                         </span>
                     </CardTitle>
