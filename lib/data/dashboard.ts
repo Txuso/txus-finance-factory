@@ -68,19 +68,32 @@ export async function getDashboardData(date: Date, userId: string): Promise<Dash
 
     const excludedIds = exclusions?.map(e => e.gasto_recurrente_id) || [];
 
-    // 4. Filter by month applicability and exclusions
+    // 4. Filter by month applicability, exclusions and DATE BOUNDS
     const currentMonthNum = date.getMonth() + 1; // 1-12
+    const monthStart = startOfMonth(date);
+    const monthEnd = endOfMonth(date);
+
     const filteredRecurring = (recurring as GastoRecurrente[] || [])
         .filter(item => {
-            // Check if month is in applicability array (if it exists)
+            // A. Check month applicability array
             const matchesMonth = !item.meses_aplicacion ||
                 item.meses_aplicacion.length === 0 ||
                 item.meses_aplicacion.includes(currentMonthNum);
 
-            // Check if not explicitly excluded for this month
+            // B. Check if not explicitly excluded
             const isNotExcluded = !excludedIds.includes(item.id);
 
-            return matchesMonth && isNotExcluded;
+            // C. Check DATE BOUNDS
+            const startLimit = item.fecha_inicio ? new Date(item.fecha_inicio) : null;
+            const endLimit = item.fecha_fin ? new Date(item.fecha_fin) : null;
+
+            // Is active this month if:
+            // 1. No start date OR start date is before or within this month
+            const isStarted = !startLimit || startLimit <= monthEnd;
+            // 2. No end date OR end date is after or within this month
+            const isNotFinished = !endLimit || endLimit >= monthStart;
+
+            return matchesMonth && isNotExcluded && isStarted && isNotFinished;
         });
 
     return {

@@ -55,9 +55,12 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             tipo: initialData?.tipo || 'Gasto variable',
             metodo_pago: initialData?.metodo_pago || METODOS_PAGO[0],
             es_automatico: initialData?.es_automatico || false,
-            meses_aplicacion: (initialData as any)?.meses_aplicacion || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            fecha_inicio: (initialData as any)?.fecha_inicio ? new Date((initialData as any).fecha_inicio) : new Date(),
+            fecha_fin: (initialData as any)?.fecha_fin ? new Date((initialData as any).fecha_fin) : null,
         },
     })
+
+    const tieneFechaFin = form.watch("fecha_fin" as any) !== null;
 
     // Reset form when initialData changes (important for dialogs)
     useEffect(() => {
@@ -66,7 +69,8 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                 ...initialData,
                 notas: initialData.notas || "",
                 fecha: initialData.fecha ? new Date(initialData.fecha) : undefined,
-                meses_aplicacion: (initialData as any)?.meses_aplicacion || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                fecha_inicio: (initialData as any)?.fecha_inicio ? new Date((initialData as any).fecha_inicio) : new Date(),
+                fecha_fin: (initialData as any)?.fecha_fin ? new Date((initialData as any).fecha_fin) : null,
             } as any)
         }
     }, [initialData, form])
@@ -122,7 +126,8 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                 tipo: "Tipo",
                 metodo_pago: "Método de Pago",
                 notas: "Notas",
-                meses_aplicacion: "Meses de Aplicación"
+                fecha_inicio: "Fecha de Inicio",
+                fecha_fin: "Fecha de Fin"
             };
             return fieldNames[key] || key;
         }).join(", ");
@@ -315,71 +320,122 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                             )}
                         />
                     )}
-                    {/* Selector de Meses (Solo para Gasto fijo) */}
+                    {/* Control de Duración (Solo para Gasto fijo) */}
                     {form.watch("tipo" as any) === "Gasto fijo" && (
-                        <FormField
-                            control={form.control}
-                            name="meses_aplicacion"
-                            render={({ field }) => (
-                                <FormItem className="col-span-1 md:col-span-2 space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                                    <div className="flex items-center justify-between">
-                                        <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                                            <CalendarIcon className="h-4 w-4 text-blue-500" />
-                                            Meses en los que aplica
-                                        </FormLabel>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 text-xs text-blue-600 hover:text-blue-700 font-medium px-2"
-                                            onClick={() => {
-                                                const current = field.value || [];
-                                                if (current.length === 12) {
-                                                    field.onChange([]);
-                                                } else {
-                                                    field.onChange([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-                                                }
-                                            }}
-                                        >
-                                            {field.value?.length === 12 ? "Ninguno" : "Todos"}
-                                        </Button>
-                                    </div>
-                                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                                        {["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"].map((mes, index) => {
-                                            const monthNum = index + 1;
-                                            const isSelected = field.value?.includes(monthNum);
-                                            return (
-                                                <Button
-                                                    key={mes}
-                                                    type="button"
-                                                    variant={isSelected ? "default" : "outline"}
-                                                    size="sm"
-                                                    className={cn(
-                                                        "h-9 text-xs font-medium transition-all",
-                                                        isSelected
-                                                            ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent shadow-sm"
-                                                            : "bg-white dark:bg-slate-900 hover:border-blue-300"
-                                                    )}
-                                                    onClick={() => {
-                                                        const current = field.value || [];
-                                                        const next = current.includes(monthNum)
-                                                            ? current.filter((m: number) => m !== monthNum)
-                                                            : [...current, monthNum].sort((a: number, b: number) => a - b);
-                                                        field.onChange(next);
-                                                    }}
-                                                >
-                                                    {mes}
-                                                </Button>
-                                            );
-                                        })}
-                                    </div>
-                                    <FormMessage />
-                                    <p className="text-[10px] text-muted-foreground italic">
-                                        * Si es un gasto fijo, se guardará como plantilla para aparecer automáticamente en los meses seleccionados.
-                                    </p>
-                                </FormItem>
-                            )}
-                        />
+                        <div className="col-span-1 md:col-span-2 space-y-4 p-5 bg-blue-50/30 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/20 backdrop-blur-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                    <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Periodo de Vigencia</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Fecha Inicio */}
+                                <FormField
+                                    control={form.control}
+                                    name="fecha_inicio"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Inicia el</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant={"outline"}
+                                                            className={cn(
+                                                                "w-full pl-3 text-left font-normal bg-background/50 backdrop-blur-sm border-blue-100 dark:border-blue-900/30 hover:border-blue-300 transition-colors",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value ? (
+                                                                format(field.value, "PPP")
+                                                            ) : (
+                                                                <span>Fecha de inicio</span>
+                                                            )}
+                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={field.value || undefined}
+                                                        onSelect={field.onChange}
+                                                        initialFocus
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Fecha Fin */}
+                                <FormField
+                                    control={form.control}
+                                    name="fecha_fin"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <div className="flex items-center justify-between">
+                                                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Finaliza el</FormLabel>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="no-end-date"
+                                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        checked={!tieneFechaFin}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                field.onChange(null);
+                                                            } else {
+                                                                field.onChange(new Date());
+                                                            }
+                                                        }}
+                                                    />
+                                                    <label htmlFor="no-end-date" className="text-[10px] font-medium text-muted-foreground cursor-pointer">
+                                                        Sin fecha fin
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <Popover>
+                                                <PopoverTrigger asChild disabled={!tieneFechaFin}>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant={"outline"}
+                                                            disabled={!tieneFechaFin}
+                                                            className={cn(
+                                                                "w-full pl-3 text-left font-normal bg-background/50 backdrop-blur-sm border-blue-100 dark:border-blue-900/30 hover:border-blue-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value ? (
+                                                                format(field.value, "PPP")
+                                                            ) : (
+                                                                <span>Sin fecha de fin</span>
+                                                            )}
+                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={field.value || undefined}
+                                                        onSelect={field.onChange}
+                                                        initialFocus
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70 italic mt-2">
+                                * Este gasto aparecerá automáticamente en el dashboard dentro del rango de fechas seleccionado.
+                            </p>
+                        </div>
                     )}
                 </div>
 

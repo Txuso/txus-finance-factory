@@ -32,14 +32,23 @@ export async function createTransaction(data: TransactionFormValues) {
             .maybeSingle();
 
         if (existing) {
+            const updateData: any = {
+                monto_estimado: Math.abs(baseData.monto),
+                categoria: baseData.categoria,
+                dia_cobro_estimado: new Date(baseData.fecha).getDate()
+            };
+
+            // Only update start date if provided or if it helps consistency
+            if (baseData.fecha_inicio) {
+                updateData.fecha_inicio = format(baseData.fecha_inicio, 'yyyy-MM-dd');
+            }
+
+            // Handle end date (could be null)
+            updateData.fecha_fin = baseData.fecha_fin ? format(baseData.fecha_fin, 'yyyy-MM-dd') : null;
+
             await supabase
                 .from("gastos_recurrentes")
-                .update({
-                    monto_estimado: Math.abs(baseData.monto),
-                    categoria: baseData.categoria,
-                    meses_aplicacion: meses_aplicacion,
-                    dia_cobro_estimado: new Date(baseData.fecha).getDate()
-                })
+                .update(updateData)
                 .eq("id", existing.id)
                 .eq("user_id", user.id);
         } else {
@@ -50,14 +59,15 @@ export async function createTransaction(data: TransactionFormValues) {
                     descripcion: baseData.descripcion,
                     monto_estimado: Math.abs(baseData.monto),
                     categoria: baseData.categoria,
-                    meses_aplicacion: meses_aplicacion,
                     dia_cobro_estimado: new Date(baseData.fecha).getDate(),
+                    fecha_inicio: format(baseData.fecha_inicio || startOfMonth(new Date(baseData.fecha)), 'yyyy-MM-dd'),
+                    fecha_fin: baseData.fecha_fin ? format(baseData.fecha_fin, 'yyyy-MM-dd') : null,
                     activo: true
                 }]);
         }
     }
 
-    const { meses_aplicacion, ...transactionData } = validatedFields.data;
+    const { meses_aplicacion, fecha_inicio, fecha_fin, ...transactionData } = validatedFields.data;
 
     const { error } = await supabase
         .from("transacciones")
@@ -95,7 +105,7 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
 
     // If it's a "Gasto fijo", sync with gastos_recurrentes
     if (validatedFields.data.tipo === 'Gasto fijo') {
-        const { meses_aplicacion, ...baseData } = validatedFields.data;
+        const { meses_aplicacion, fecha_inicio, fecha_fin, ...baseData } = validatedFields.data;
 
         const { data: existing } = await supabase
             .from("gastos_recurrentes")
@@ -110,15 +120,16 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
                 .update({
                     monto_estimado: Math.abs(baseData.monto),
                     categoria: baseData.categoria,
-                    meses_aplicacion: meses_aplicacion,
-                    dia_cobro_estimado: new Date(baseData.fecha).getDate()
+                    dia_cobro_estimado: new Date(baseData.fecha).getDate(),
+                    fecha_inicio: baseData.fecha_inicio ? format(baseData.fecha_inicio, 'yyyy-MM-dd') : undefined,
+                    fecha_fin: baseData.fecha_fin ? format(baseData.fecha_fin, 'yyyy-MM-dd') : null,
                 })
                 .eq("id", existing.id)
                 .eq("user_id", user.id);
         }
     }
 
-    const { meses_aplicacion, ...transactionData } = validatedFields.data;
+    const { meses_aplicacion, fecha_inicio, fecha_fin, ...transactionData } = validatedFields.data;
 
     const { error } = await supabase
         .from("transacciones")

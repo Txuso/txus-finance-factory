@@ -24,6 +24,8 @@ export const transactionSchema = z.object({
     }),
     es_automatico: z.boolean().default(false),
     meses_aplicacion: z.array(z.number()).nullable().optional(),
+    fecha_inicio: z.date().nullable().optional(),
+    fecha_fin: z.date().nullable().optional(),
     id: z.string().nullable().optional(),
 });
 
@@ -40,6 +42,8 @@ export const recurringSchema = z.object({
     dia_cobro_estimado: z.coerce.number().min(1).max(31),
     activo: z.boolean().default(true),
     meses_aplicacion: z.array(z.number()).default([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    fecha_inicio: z.date().nullable().optional(),
+    fecha_fin: z.date().nullable().optional(),
 });
 
 export type TransactionFormValues = z.infer<typeof transactionSchema>

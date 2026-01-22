@@ -57,5 +57,7 @@ export interface GastoRecurrente {
     dia_cobro_estimado: number;
     activo: boolean;
     meses_aplicacion?: number[]; // [1, 2, ..., 12]
+    fecha_inicio?: string; // DATE as ISO string
+    fecha_fin?: string; // DATE as ISO string
     created_at?: string;
 }
