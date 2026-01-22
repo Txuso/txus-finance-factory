@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { MonthSelector } from "./MonthSelector"
 import { useEffect } from "react"
 import { addMonths, subMonths } from "date-fns"
@@ -24,10 +24,17 @@ export function MonthSelectorWrapper({ initialDate }: { initialDate: Date }) {
         })
     }, [initialDate, router])
 
+    const searchParams = useSearchParams()
+
     const handleMonthChange = (newDate: Date) => {
         const month = newDate.getMonth() + 1
         const year = newDate.getFullYear()
-        router.push(`/dashboard?year=${year}&month=${month}`)
+
+        const params = new URLSearchParams(searchParams.toString())
+        params.set("year", year.toString())
+        params.set("month", month.toString())
+
+        router.push(`?${params.toString()}`)
     }
 
     return (

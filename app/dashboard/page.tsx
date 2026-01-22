@@ -19,6 +19,7 @@ import { SavingsGoalProgress } from "@/components/dashboard/SavingsGoalProgress"
 import { SavingsGrowthChart } from "@/components/dashboard/SavingsGrowthChart"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { DashboardTabsWrapper } from "@/components/dashboard/DashboardTabsWrapper"
 
 interface DashboardPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -202,7 +203,7 @@ async function DashboardContent({
                 totalInvestments={totalInvestments}
             />
 
-            <Tabs defaultValue="summary" className="w-full">
+            <DashboardTabsWrapper defaultValue="summary">
                 <div className="flex items-center justify-center mb-6">
                     <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-sm p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/50 h-auto">
                         <TabsTrigger
@@ -216,7 +217,7 @@ async function DashboardContent({
                             value="stats"
                             className="rounded-lg px-6 py-2.5 flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all hover:scale-105 active:scale-95 cursor-pointer font-medium text-slate-500"
                         >
-                            <TrendingUp className="h-4 w-4" />
+                            <PieChart className="h-4 w-4" />
                             Estadísticas
                         </TabsTrigger>
                     </TabsList>
@@ -262,7 +263,7 @@ async function DashboardContent({
                         </div>
                     </div>
                 </TabsContent>
-            </Tabs>
+            </DashboardTabsWrapper>
             <AddTransactionFAB />
         </div>
     )

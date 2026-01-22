@@ -440,17 +440,33 @@ function QuickAddButton({ tipo }: { tipo: 'Gasto fijo' | 'Gasto variable' | 'Inv
                     <Plus className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle>Nueva Transacción: {tipo}</DialogTitle>
-                    <DialogDescription>
-                        Añade un nuevo {tipo} manualmente a tu registro.
-                    </DialogDescription>
-                </DialogHeader>
-                <TransactionForm
-                    initialData={{ tipo } as any}
-                    onSuccess={() => setOpen(false)}
-                />
+            <DialogContent
+                className="sm:max-w-[550px] p-0 overflow-hidden border-0 shadow-2xl sm:rounded-3xl flex flex-col"
+                closeButtonClassName="text-white hover:text-white/80"
+            >
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 text-white flex items-center gap-4 shrink-0">
+                    <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 shadow-lg">
+                        <img
+                            src="/logo.png"
+                            alt="Logo"
+                            className="w-8 h-8 object-contain"
+                        />
+                    </div>
+                    <div>
+                        <DialogTitle className="text-xl font-black italic tracking-tighter uppercase">
+                            Nueva: {tipo === 'Ingreso' ? 'Ingreso' : tipo}
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400 text-xs font-medium uppercase tracking-widest opacity-70">
+                            Txus Finance Factory
+                        </DialogDescription>
+                    </div>
+                </div>
+                <div className="p-6 md:p-8">
+                    <TransactionForm
+                        initialData={{ tipo } as any}
+                        onSuccess={() => setOpen(false)}
+                    />
+                </div>
             </DialogContent>
         </Dialog>
     );
