@@ -19,6 +19,9 @@ import { SavingsGoalProgress } from "@/components/dashboard/SavingsGoalProgress"
 import { SavingsGrowthChart } from "@/components/dashboard/SavingsGrowthChart"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { GlobalSearch } from "@/components/dashboard/GlobalSearch"
+import { PrivacyToggle } from "@/components/layout/PrivacyToggle"
+import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 import { DashboardTabsWrapper } from "@/components/dashboard/DashboardTabsWrapper"
 
 interface DashboardPageProps {
@@ -72,6 +75,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                 {/* Botones de Acción - Mejorados para Mobile */}
                 <div className="flex items-center justify-center gap-2 w-full max-w-xs sm:absolute sm:top-0 sm:right-0 sm:w-auto mt-2 sm:mt-0">
+                    <PrivacyToggle />
                     <Link href="/settings">
                         <Button
                             variant="ghost"
@@ -183,14 +187,14 @@ async function DashboardContent({
                                     <span className="font-black text-xl sm:text-2xl block italic tracking-tighter uppercase mb-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-emerald-200 bg-clip-text text-transparent">
                                         ¡BRUTAL {firstName.toUpperCase()}! 🚀
                                     </span>
-                                    Tu ahorro es del <span className="font-black text-emerald-600 dark:text-emerald-400">{(savingsPercentage * 100).toFixed(1)}%</span>. Meta superada con creces.
+                                    Tu ahorro es del <span className="font-black text-emerald-600 dark:text-emerald-400"><PrivacyBlur>{(savingsPercentage * 100).toFixed(1)}%</PrivacyBlur></span>. Meta superada con creces.
                                 </>
                             ) : (
                                 <>
                                     <span className="font-black text-xl sm:text-2xl block uppercase tracking-tighter mb-1 text-slate-400">
                                         VAMOS {firstName.toUpperCase()} 💪
                                     </span>
-                                    Enfoque total. Te faltan <span className="font-black text-rose-500 dark:text-rose-400">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</span> para el objetivo.
+                                    Enfoque total. Te faltan <span className="font-black text-rose-500 dark:text-rose-400"><PrivacyBlur>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</PrivacyBlur></span> para el objetivo.
                                 </>
                             )}
                         </p>
@@ -228,6 +232,11 @@ async function DashboardContent({
                             Estadísticas
                         </TabsTrigger>
                     </TabsList>
+                </div>
+
+                {/* Buscador Global tras los tabs */}
+                <div className="flex justify-center mb-8 px-4">
+                    <GlobalSearch localTransactions={transactions} />
                 </div>
 
                 <TabsContent value="summary" className="mt-0">
@@ -270,8 +279,8 @@ async function DashboardContent({
                         </div>
                     </div>
                 </TabsContent>
-            </DashboardTabsWrapper>
+            </DashboardTabsWrapper >
             <AddTransactionFAB />
-        </div>
+        </div >
     )
 }

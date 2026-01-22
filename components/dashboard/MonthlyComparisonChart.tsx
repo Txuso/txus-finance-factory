@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthlyStat } from "@/lib/data/dashboard"
 import { formatCurrency } from "@/lib/utils"
+import { usePrivacy } from "@/components/providers/PrivacyProvider"
 
 interface MonthlyComparisonChartProps {
     data: MonthlyStat[]
@@ -12,6 +13,12 @@ interface MonthlyComparisonChartProps {
 }
 
 export function MonthlyComparisonChart({ data, title = "Comparativa Mensual", description }: MonthlyComparisonChartProps) {
+    const { isPrivate } = usePrivacy();
+
+    const formatValue = (value: number) => {
+        if (isPrivate) return "****";
+        return formatCurrency(value);
+    };
     return (
         <Card className="border-0 shadow-md bg-white dark:bg-slate-900 overflow-hidden">
             <CardHeader>
@@ -34,7 +41,7 @@ export function MonthlyComparisonChart({ data, title = "Comparativa Mensual", de
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fill: '#64748B', fontSize: 12 }}
-                                tickFormatter={(value) => `${value}€`}
+                                tickFormatter={(value) => isPrivate ? "****" : `${value}€`}
                             />
                             <Tooltip
                                 cursor={{ fill: '#F8FAFC' }}
@@ -44,7 +51,7 @@ export function MonthlyComparisonChart({ data, title = "Comparativa Mensual", de
                                     boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                                     padding: '12px'
                                 }}
-                                formatter={(value: any) => [formatCurrency(Number(value)), '']}
+                                formatter={(value: any) => [formatValue(Number(value)), '']}
                             />
                             <Legend
                                 verticalAlign="top"

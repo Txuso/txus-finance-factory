@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Target, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 
 interface SavingsGoalProgressProps {
     currentSavings: number
@@ -31,7 +32,7 @@ export function SavingsGoalProgress({ currentSavings, totalIncome, targetPercent
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-2xl font-black bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 dark:from-white dark:via-slate-300 dark:to-white bg-clip-text text-transparent leading-none tracking-tighter">
-                            {(currentPercentage * 100).toFixed(1)}%
+                            <PrivacyBlur>{(currentPercentage * 100).toFixed(1)}%</PrivacyBlur>
                         </p>
                         <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider mt-1">
                             Meta: {(targetPercentage * 100).toFixed(0)}%

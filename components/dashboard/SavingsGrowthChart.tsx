@@ -15,6 +15,7 @@ import {
     Legend
 } from "recharts"
 import { MonthlyStat } from "@/lib/data/dashboard"
+import { usePrivacy } from "@/components/providers/PrivacyProvider"
 
 interface SavingsGrowthChartProps {
     data: MonthlyStat[]
@@ -35,7 +36,10 @@ export function SavingsGrowthChart({ data, title, description }: SavingsGrowthCh
         }
     });
 
+    const { isPrivate } = usePrivacy();
+
     const formatCurrency = (value: number) => {
+        if (isPrivate) return "****";
         return new Intl.NumberFormat('es-ES', {
             style: 'currency',
             currency: 'EUR',

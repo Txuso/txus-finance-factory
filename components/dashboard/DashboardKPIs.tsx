@@ -3,6 +3,9 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Wallet, PieChart } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
+
+import { PrivacyToggle } from "@/components/layout/PrivacyToggle"
 
 interface DashboardKPIsProps {
     totalIncome: number
@@ -22,6 +25,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
                 : "bg-gradient-to-br from-orange-600 via-rose-600 to-red-700"
                 } text-white relative group`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-white/20 transition-colors" />
+
                 <CardContent className="p-4 sm:p-5 relative z-10">
                     <div className="flex justify-between items-start">
                         <div>
@@ -29,7 +33,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
                                 Ahorro Neto Mes
                             </p>
                             <h2 className="text-2xl sm:text-3xl font-black mt-1 tracking-tighter">
-                                {formatCurrency(savings)}
+                                <PrivacyBlur>{formatCurrency(savings)}</PrivacyBlur>
                             </h2>
                         </div>
                         <div className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-xl group-hover:scale-110 transition-transform">
@@ -46,7 +50,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
                         <div>
                             <p className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-[0.2em]">Ingresos</p>
                             <h3 className="text-xl sm:text-2xl font-black mt-1 text-emerald-600 dark:text-emerald-400 tracking-tight">
-                                {formatCurrency(totalIncome)}
+                                <PrivacyBlur>{formatCurrency(totalIncome)}</PrivacyBlur>
                             </h3>
                         </div>
                         <div className="p-2 sm:p-2.5 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/30 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/40 transition-colors">
@@ -63,7 +67,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
                         <div>
                             <p className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-[0.2em]">Gastos Totales</p>
                             <h3 className="text-xl sm:text-2xl font-black mt-1 text-rose-600 dark:text-rose-400 tracking-tight">
-                                {formatCurrency(totalExpenses)}
+                                <PrivacyBlur>{formatCurrency(totalExpenses)}</PrivacyBlur>
                             </h3>
                         </div>
                         <div className="p-2 sm:p-2.5 bg-rose-50/50 dark:bg-rose-900/20 rounded-2xl border border-rose-100/50 dark:border-rose-800/30 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/40 transition-colors">
@@ -80,7 +84,7 @@ export function DashboardKPIs({ totalIncome, totalExpenses, totalInvestments }: 
                         <div>
                             <p className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-[0.2em]">Inversión</p>
                             <h3 className="text-xl sm:text-2xl font-black mt-1 text-blue-600 dark:text-blue-400 tracking-tight">
-                                {formatCurrency(totalInvestments)}
+                                <PrivacyBlur>{formatCurrency(totalInvestments)}</PrivacyBlur>
                             </h3>
                         </div>
                         <div className="p-2 sm:p-2.5 bg-blue-50/50 dark:bg-blue-900/20 rounded-2xl border border-blue-100/50 dark:border-blue-800/30 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">

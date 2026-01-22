@@ -214,6 +214,47 @@ export async function deleteAllRecurringExpenses() {
     return { success: true }
 }
 
+export async function searchTransactions(query: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
+    const search = query.trim();
+    if (search.length < 2) return { data: [] }
+
+    // Postgrest syntax: column.cast(type).operator.value
+    // We use % for wildcards and double quotes for the search term to handle spaces
+    const term = `%${search}%`;
+    let orParts = [
+        `descripcion.ilike."${term}"`,
+        `categoria.cast(text).ilike."${term}"`
+    ];
+
+    // Check if it's a valid number for amount search
+    const isNumeric = !isNaN(Number(search.replace(',', '.')));
+    if (isNumeric) {
+        const val = Math.abs(Number(search.replace(',', '.')));
+        orParts.push(`monto.eq.${val}`);
+        orParts.push(`monto.eq.-${val}`);
+    }
+
+    const { data, error } = await supabase
+        .from("transacciones")
+        .select("*")
+        .eq("user_id", user.id)
+        .or(orParts.join(','))
+        .order("fecha", { ascending: false })
+        .limit(20);
+
+    if (error) {
+        console.error("Supabase Search Error:", error);
+        return { error: error.message };
+    }
+
+    return { data: data || [] };
+}
+
 export async function excludeRecurringExpense(recurringId: string, monthDate: Date) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

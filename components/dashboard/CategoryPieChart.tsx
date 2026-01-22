@@ -4,6 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, Legend } from "recha
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CategoryStat } from "@/lib/data/dashboard"
 import { formatCurrency } from "@/lib/utils"
+import { usePrivacy } from "@/components/providers/PrivacyProvider"
 
 interface CategoryPieChartProps {
     data: CategoryStat[]
@@ -27,13 +28,15 @@ const COLORS = [
 ]
 
 const CustomTooltip = ({ active, payload }: any) => {
+    const { isPrivate } = usePrivacy();
+
     if (active && payload && payload.length) {
         const { name, value, payload: dataPayload } = payload[0];
         const color = dataPayload?.fill || payload[0].color || 'inherit';
         return (
             <div className="bg-white dark:bg-slate-900 px-3 py-2 rounded-xl shadow-lg border-0">
                 <p className="text-sm font-medium" style={{ color }}>
-                    {name}: <span className="font-bold">{formatCurrency(value)}</span>
+                    {name}: <span className="font-bold">{isPrivate ? "****" : formatCurrency(value)}</span>
                 </p>
             </div>
         );
@@ -42,6 +45,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export function CategoryPieChart({ data, title = "Distribución por Categoría", description }: CategoryPieChartProps) {
+    const { isPrivate } = usePrivacy();
     const total = data.reduce((sum, item) => sum + item.value, 0)
 
     if (data.length === 0) {
@@ -104,7 +108,7 @@ export function CategoryPieChart({ data, title = "Distribución por Categoría",
                                     <span className="font-medium" style={{ color }}>{item.name}</span>
                                 </div>
                                 <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                    {((item.value / total) * 100).toFixed(1)}%
+                                    {isPrivate ? "**.*%" : `${((item.value / total) * 100).toFixed(1)}%`}
                                 </span>
                             </div>
                         );

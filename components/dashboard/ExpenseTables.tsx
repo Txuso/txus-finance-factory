@@ -20,6 +20,7 @@ import {
 import { TransactionForm } from "@/components/transactions/TransactionForm"
 import { useState } from "react"
 import { format } from "date-fns"
+import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 
 interface ExpenseTablesProps {
     transactions: Transaccion[]
@@ -107,7 +108,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                             <QuickAddButton tipo="Gasto fijo" />
                         </span>
                         <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
-                            {formatCurrency(totalFixed)}
+                            <PrivacyBlur>{formatCurrency(totalFixed)}</PrivacyBlur>
                         </span>
                     </CardTitle>
                 </CardHeader>
@@ -146,11 +147,11 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                             <TableCell className="py-2 text-right">
                                                                 {def.transaction ? (
                                                                     <span className="font-bold text-slate-900 dark:text-slate-100">
-                                                                        {formatCurrency(Math.abs(def.transaction.monto))}
+                                                                        <PrivacyBlur>{formatCurrency(Math.abs(def.transaction.monto))}</PrivacyBlur>
                                                                     </span>
                                                                 ) : (
                                                                     <span className="text-slate-900 dark:text-slate-100 font-medium">
-                                                                        {formatCurrency(def.definition.monto_estimado)}
+                                                                        <PrivacyBlur>{formatCurrency(def.definition.monto_estimado)}</PrivacyBlur>
                                                                     </span>
                                                                 )}
                                                             </TableCell>
@@ -165,7 +166,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                         <TableRow key={`extra-${t.id}`} className="bg-slate-50/50">
                                                             <TableCell className="py-2 font-medium text-slate-600 italic">{t.descripcion}</TableCell>
                                                             <TableCell className="py-2 text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
-                                                            <TableCell className="py-2 text-right font-bold">{formatCurrency(Math.abs(t.monto))}</TableCell>
+                                                            <TableCell className="py-2 text-right font-bold"><PrivacyBlur>{formatCurrency(Math.abs(t.monto))}</PrivacyBlur></TableCell>
                                                             <TableCell className="py-2">
                                                                 <TransactionActionsInner transaction={t} />
                                                             </TableCell>
@@ -216,7 +217,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                             <QuickAddButton tipo="Gasto variable" />
                         </span>
                         <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
-                            {formatCurrency(totalVariable)}
+                            <PrivacyBlur>{formatCurrency(totalVariable)}</PrivacyBlur>
                         </span>
                     </CardTitle>
                 </CardHeader>
@@ -253,7 +254,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="py-2 text-right font-bold text-rose-600 text-xs sm:text-sm">
-                                                    {formatCurrency(Math.abs(t.monto))}
+                                                    <PrivacyBlur>{formatCurrency(Math.abs(t.monto))}</PrivacyBlur>
                                                 </TableCell>
                                                 <TableCell className="py-2">
                                                     <TransactionActionsInner transaction={t} />
@@ -303,7 +304,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                     <QuickAddButton tipo="Inversión" />
                                 </span>
                                 <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
-                                    {formatCurrency(totalInvestments)}
+                                    <PrivacyBlur>{formatCurrency(totalInvestments)}</PrivacyBlur>
                                 </span>
                             </CardTitle>
                         </CardHeader>
@@ -326,7 +327,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                 </TableCell>
                                                 <TableCell className="py-2 font-medium text-xs sm:text-sm">{t.descripcion}</TableCell>
                                                 <TableCell className="py-2 text-right font-bold text-blue-600 dark:text-blue-400 text-xs sm:text-sm">
-                                                    {formatCurrency(Math.abs(t.monto))}
+                                                    <PrivacyBlur>{formatCurrency(Math.abs(t.monto))}</PrivacyBlur>
                                                 </TableCell>
                                                 <TableCell className="py-2">
                                                     <TransactionActionsInner transaction={t} />
@@ -374,7 +375,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                             <QuickAddButton tipo="Ingreso" />
                         </span>
                         <span className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
-                            {formatCurrency(totalIncome)}
+                            <PrivacyBlur>{formatCurrency(totalIncome)}</PrivacyBlur>
                         </span>
                     </CardTitle>
                 </CardHeader>
@@ -409,7 +410,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                     <Badge variant="outline" className="text-[10px] sm:text-xs border-emerald-200 text-emerald-700 bg-emerald-50">{t.categoria}</Badge>
                                                 </TableCell>
                                                 <TableCell className="py-2 text-right font-bold text-emerald-600 text-xs sm:text-sm">
-                                                    {formatCurrency(Math.abs(t.monto))}
+                                                    <PrivacyBlur>{formatCurrency(Math.abs(t.monto))}</PrivacyBlur>
                                                 </TableCell>
                                                 <TableCell className="py-2">
                                                     <TransactionActionsInner transaction={t} />
