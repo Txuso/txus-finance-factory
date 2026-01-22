@@ -20,11 +20,13 @@ function guessCategory(description: string): Categoria {
 
     // Supermercado
     if (desc.includes('MERCADONA') || desc.includes('COALIMENT') || desc.includes('MARKET') ||
-        desc.includes('EROSKI') || desc.includes('LIDL') || desc.includes('SUPERMERCADO')) return 'Supermercado';
+        desc.includes('EROSKI') || desc.includes('LIDL') || desc.includes('SUPERMERCADO') ||
+        desc.includes('COVIRAN') || desc.includes('PANADERIA')) return 'Supermercado';
 
     // Transporte
     if (desc.includes('REPSOL') || desc.includes('CEPSA') || desc.includes('GASOLINERA') ||
-        desc.includes('BP') || desc.includes('EMPALME')) return 'Transporte';
+        desc.includes('BP') || desc.includes('EMPALME') || desc.includes('AUT') ||
+        desc.includes('GASO')) return 'Transporte';
 
     // Vivienda (Gastos fijos/Hogar)
     if (desc.includes('CUOTA PTMO') || desc.includes('GASTOS PISO GERB') || desc.includes('COMUNITAT JOSU MENSUAL')) return 'Vivienda';
@@ -43,7 +45,7 @@ function guessCategory(description: string): Categoria {
 
     // Otros
     if (desc.includes('FARMACIA')) return 'Salud';
-    if (desc.includes('TRANSF. MANGOPAY') || desc.includes('APLAZAME')) return 'Otros';
+    if (desc.includes('TRANSF. MANGOPAY') || desc.includes('APLAZAME') || desc.includes('ONEY PAGO APLAZADO')) return 'Otros';
     if (desc.includes('INGRESO') || desc.includes('TRANSFERENCIA A FAVOR')) return 'Otros';
 
     return 'Otros';
@@ -66,6 +68,7 @@ function guessType(description: string, amount: number): 'Gasto variable' | 'Gas
         desc.includes('GASTOS PISO GERB') ||
         desc.includes('APLAZAME') ||
         desc.includes('CETELEM') ||
+        desc.includes('ONEY PAGO APLAZADO') ||
         desc.includes('COMUNITAT JOSU MENSUAL')
     ) {
         return 'Gasto fijo';
