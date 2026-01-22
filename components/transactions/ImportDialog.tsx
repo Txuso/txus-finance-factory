@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Upload, FileText, Check, Trash2, RotateCcw } from "lucide-react"
+import { Upload, FileText, Check, Trash2, RotateCcw, AlertOctagon } from "lucide-react"
 import { parseUpload, saveImportedTransactions } from "@/app/actions/import"
-import { deleteAllTransactions } from "@/app/actions/transaction"
+import { deleteAllTransactions, deleteAllRecurringExpenses } from "@/app/actions/transaction"
 import { ParsedTransaction } from "@/lib/parsers/pdf-parser"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -73,12 +73,23 @@ export function ImportDialog() {
     }
 
     const handleResetData = async () => {
-        if (confirm("⚠️ ¿⚠️ ¿Estás seguro? Esto borrará TODAS las transacciones de la base de datos. Esta acción es para TESTING.")) {
+        if (confirm("⚠️ ¿Estás seguro? Esto borrará TODAS las transacciones (variables e ingresos) de la base de datos. Esta acción es para TESTING.")) {
             const res = await deleteAllTransactions();
             if (res.error) {
                 toast.error(res.error);
             } else {
                 toast.success("Base de datos de transacciones vaciada");
+            }
+        }
+    }
+
+    const handleResetRecurring = async () => {
+        if (confirm("⚠️ ¿Estás seguro? Esto borrará TODOS los gastos fijos configurados. Tendrás que volver a importarlos o crearlos. Esta acción es para TESTING.")) {
+            const res = await deleteAllRecurringExpenses();
+            if (res.error) {
+                toast.error(res.error);
+            } else {
+                toast.success("Gastos fijos eliminados");
             }
         }
     }
@@ -97,9 +108,14 @@ export function ImportDialog() {
                         <Upload className="h-4 w-4" />
                         <span className="hidden sm:inline">Importar PDF</span>
                     </Button>
-                    <Button variant="destructive" size="icon" className="rounded-2xl shadow-sm hover:bg-rose-600 transition-colors" onClick={(e) => { e.stopPropagation(); handleResetData(); }} title="RESET DATA (Testing)">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                        <Button variant="destructive" size="icon" className="h-10 w-10 rounded-2xl shadow-sm hover:bg-rose-600 transition-colors" onClick={(e) => { e.stopPropagation(); handleResetData(); }} title="RESET TRANSACCIONES (Testing)">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="destructive" size="icon" className="h-10 w-10 rounded-2xl shadow-sm hover:bg-orange-600 transition-colors" onClick={(e) => { e.stopPropagation(); handleResetRecurring(); }} title="RESET GASTOS FIJOS (Testing)">
+                            <AlertOctagon className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[90vw] w-full max-h-[90vh] overflow-y-auto">

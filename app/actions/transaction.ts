@@ -178,6 +178,28 @@ export async function deleteAllTransactions() {
     }
 
     revalidatePath("/dashboard")
+    revalidatePath("/transactions")
+    return { success: true }
+}
+
+export async function deleteAllRecurringExpenses() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
+    const { error } = await supabase
+        .from("gastos_recurrentes")
+        .delete()
+        .eq("user_id", user.id)
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+
+    if (error) {
+        console.error("Error deleting all recurring expenses:", error)
+        return { error: "Error al eliminar los gastos recurrentes" }
+    }
+
+    revalidatePath("/dashboard")
     return { success: true }
 }
 

@@ -39,12 +39,27 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
     const investmentTransactions = transactions.filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión');
 
     // 3. Procesar Gastos Fijos
+    const cleanDescription = (desc: string) => {
+        return desc
+            .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, '')
+            .replace(/\b\d{2}[/.-]\d{2}\b/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toUpperCase();
+    };
+
     const fixedExpensesList = recurringExpenses.map(recurring => {
-        const match = transactions.find(t =>
-            t.tipo === 'Gasto fijo' &&
-            (t.descripcion.toLowerCase().includes(recurring.descripcion.toLowerCase()) ||
-                (t.categoria === recurring.categoria && Math.abs(t.monto - recurring.monto_estimado) < 50))
-        );
+        const recurringClean = cleanDescription(recurring.descripcion);
+        const match = transactions.find(t => {
+            if (t.tipo !== 'Gasto fijo') return false;
+
+            const tClean = cleanDescription(t.descripcion);
+            const matchesName = tClean === recurringClean || tClean.includes(recurringClean) || recurringClean.includes(tClean);
+
+            const matchesAmount = Math.abs(Math.abs(t.monto) - recurring.monto_estimado) < 50;
+
+            return matchesName && matchesAmount;
+        });
 
         return {
             definition: recurring,

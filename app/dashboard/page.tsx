@@ -7,6 +7,7 @@ import { AddTransactionFAB } from "@/components/transactions/AddTransactionFAB"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
 import { YearSelector } from "@/components/dashboard/YearSelector"
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton"
 
 import { ImportDialog } from "@/components/transactions/ImportDialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -25,6 +26,7 @@ interface DashboardPageProps {
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
     const params = await searchParams;
+    const searchKey = JSON.stringify(params);
 
     const now = new Date();
     let currentDate = now;
@@ -37,12 +39,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         }
     }
 
-    // Estadísticas independientes
-    const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
-    const yearlyStats = await getYearlyStats(statsYear);
-    const categoryStats = await getCategoryStats(statsYear);
-
-    const { transactions, recurringExpenses, config } = await getDashboardData(currentDate);
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || "Josu";
@@ -52,6 +48,82 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     if (hour >= 6 && hour < 12) greeting = "Buenos días";
     else if (hour >= 12 && hour < 20) greeting = "Buenas tardes";
     else greeting = "Buenas noches";
+
+    return (
+        <div className="container mx-auto py-6 sm:py-10 space-y-6 sm:space-y-8">
+            <div className="flex flex-col items-center space-y-4 relative px-4 text-center transition-all duration-300">
+                {/* Saludo y Nombre */}
+                <p className="text-xs sm:text-sm font-semibold text-muted-foreground/80 italic tracking-wide animate-in fade-in slide-in-from-top-2 duration-700">
+                    {greeting}, {firstName}
+                </p>
+
+                {/* Logo y Título Principal */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 group">
+                    <img
+                        src="/logo.png"
+                        alt="Logo"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain filter drop-shadow-xl transition-transform group-hover:scale-105 duration-300"
+                    />
+                    <h1 className="text-3xl sm:text-5xl font-black tracking-tighter bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent italic leading-tight">
+                        Txus Finance Factory
+                    </h1>
+                </div>
+
+                {/* Botones de Acción - Mejorados para Mobile */}
+                <div className="flex items-center justify-center gap-2 w-full max-w-xs sm:absolute sm:top-0 sm:right-0 sm:w-auto mt-2 sm:mt-0">
+                    <Link href="/settings">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 hover:text-primary transition-all active:scale-95 shadow-sm border border-slate-200/50 dark:border-slate-800/50"
+                        >
+                            <SettingsIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </Button>
+                    </Link>
+                    <ImportDialog />
+                </div>
+
+                <div className="w-full max-w-md pt-2">
+                    <MonthSelectorWrapper initialDate={currentDate} />
+                </div>
+            </div>
+
+            <Suspense key={searchKey} fallback={<DashboardSkeleton />}>
+                <DashboardContent searchParams={params} firstName={firstName} currentDate={currentDate} />
+            </Suspense>
+        </div>
+    )
+}
+
+async function DashboardContent({
+    searchParams,
+    firstName,
+    currentDate
+}: {
+    searchParams: any,
+    firstName: string,
+    currentDate: Date
+}) {
+    const params = searchParams;
+    const now = new Date();
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
+    if (!userId) return null;
+
+    // Estadísticas independientes
+    const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
+
+    // Parallelize pre-render data fetching
+    const [yearlyStats, categoryStats, dashboardData] = await Promise.all([
+        getYearlyStats(statsYear, userId),
+        getCategoryStats(statsYear, userId),
+        getDashboardData(currentDate, userId)
+    ]);
+
+    const { transactions, recurringExpenses, config } = dashboardData;
 
     // Cálculos para KPIs (Lógica centralizada en el servidor)
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
@@ -91,43 +163,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const savingsNeeded = (totalIncome * targetPercentage) - actualSavings;
 
     return (
-        <div className="container mx-auto py-6 sm:py-10 space-y-6 sm:space-y-8">
-            <div className="flex flex-col items-center space-y-4 relative px-4 text-center transition-all duration-300">
-                {/* Saludo y Nombre */}
-                <p className="text-xs sm:text-sm font-semibold text-muted-foreground/80 italic tracking-wide animate-in fade-in slide-in-from-top-2 duration-700">
-                    {greeting}, {firstName}
-                </p>
-
-                {/* Logo y Título Principal */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 group">
-                    <img
-                        src="/logo.png"
-                        alt="Logo"
-                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain filter drop-shadow-xl transition-transform group-hover:scale-105 duration-300"
-                    />
-                    <h1 className="text-3xl sm:text-5xl font-black tracking-tighter bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent italic leading-tight">
-                        Txus Finance Factory
-                    </h1>
-                </div>
-
-                {/* Botones de Acción - Mejorados para Mobile */}
-                <div className="flex items-center justify-center gap-2 w-full max-w-xs sm:absolute sm:top-0 sm:right-0 sm:w-auto mt-2 sm:mt-0">
-                    <Link href="/settings">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 hover:text-primary transition-all active:scale-95 shadow-sm border border-slate-200/50 dark:border-slate-800/50"
-                        >
-                            <SettingsIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-                        </Button>
-                    </Link>
-                    <ImportDialog />
-                </div>
-
-                <div className="w-full max-w-md pt-2">
-                    <MonthSelectorWrapper initialDate={currentDate} />
-                </div>
-
+        <div className="space-y-6 sm:space-y-8">
+            <div className="flex flex-col items-center space-y-4 text-center">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-4">
                     {/* Mensaje Motivacional de Objetivo */}
                     <div className={cn(

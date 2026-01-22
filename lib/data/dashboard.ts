@@ -13,48 +13,57 @@ export interface DashboardData {
     };
 }
 
-export async function getDashboardData(date: Date): Promise<DashboardData> {
+export async function getDashboardData(date: Date, userId: string): Promise<DashboardData> {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) throw new Error("No user found");
 
     // USE LOCAL DATE STRINGS for 'DATE' column queries to avoid UTC shifts
     const start = format(startOfMonth(date), 'yyyy-MM-dd');
     const end = format(endOfMonth(date), 'yyyy-MM-dd');
 
-    // 1. Fetch Transactions for the month
-    const { data: transactions, error: transError } = await supabase
-        .from("transacciones")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("fecha", start)
-        .lte("fecha", end)
-        .order("fecha", { ascending: false });
+    // Parallelize data fetching
+    const [transactionsResult, recurringResult, configResult] = await Promise.all([
+        supabase
+            .from("transacciones")
+            .select("*")
+            .eq("user_id", userId)
+            .gte("fecha", start)
+            .lte("fecha", end)
+            .order("fecha", { ascending: false }),
+        supabase
+            .from("gastos_recurrentes")
+            .select("*")
+            .eq("user_id", userId)
+            .eq("activo", true)
+            .order("dia_cobro_estimado", { ascending: true }),
+        supabase
+            .from("configuracion")
+            .select("*")
+            .eq("user_id", userId)
+            .single()
+    ]);
+
+    const transactions = transactionsResult.data;
+    const transError = transactionsResult.error;
+    const recurring = recurringResult.data;
+    const recError = recurringResult.error;
+    const config = configResult.data;
 
     if (transError) {
         console.error("Error fetching transactions:", transError);
         throw new Error("Error fetching transactions");
     }
 
-    // 2. Fetch Recurring Expenses definition
-    let { data: recurring, error: recError } = await supabase
-        .from("gastos_recurrentes")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("activo", true)
-        .order("dia_cobro_estimado", { ascending: true });
-
     if (recError) {
         console.error("Error fetching recurring expenses:", recError);
         throw new Error("Error fetching recurring expenses");
     }
 
-    // 3. Fetch Exclusions for this month
+    // 3. Fetch Exclusions for this month (In parallel with others if possible, but let's keep it clean)
+    // 3. Fetch Exclusions for this month (In parallel with others if possible, but let's keep it clean)
     const { data: exclusions } = await supabase
         .from("exclusiones_fijos")
         .select("gasto_recurrente_id")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("mes", start);
 
     const excludedIds = exclusions?.map(e => e.gasto_recurrente_id) || [];
@@ -73,13 +82,6 @@ export async function getDashboardData(date: Date): Promise<DashboardData> {
 
             return matchesMonth && isNotExcluded;
         });
-
-    // 5. Fetch Config
-    const { data: config } = await supabase
-        .from("configuracion")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
 
     return {
         transactions: (transactions as Transaccion[]) || [],
@@ -100,104 +102,111 @@ export interface CategoryStat {
     value: number;
 }
 
-export async function getMonthlyStats(endDate: Date): Promise<MonthlyStat[]> {
+export async function getMonthlyStats(endDate: Date, userId: string): Promise<MonthlyStat[]> {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    // No auth call needed
 
     const stats: MonthlyStat[] = [];
 
-    // Fetch last 6 months
+    // Fetch last 6 months in one go
+    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 5, 1);
+    const start = format(startOfMonth(startDate), 'yyyy-MM-dd');
+    const end = format(endOfMonth(endDate), 'yyyy-MM-dd');
+
+    const { data: transactions } = await supabase
+        .from("transacciones")
+        .select("fecha, monto, tipo, categoria")
+        .eq("user_id", userId)
+        .gte("fecha", start)
+        .lte("fecha", end);
+
+    if (!transactions) return [];
+
+    // Group by month
     for (let i = 5; i >= 0; i--) {
         const date = new Date(endDate.getFullYear(), endDate.getMonth() - i, 1);
-        const start = format(startOfMonth(date), 'yyyy-MM-dd');
-        const end = format(endOfMonth(date), 'yyyy-MM-dd');
+        const monthKey = format(date, 'yyyy-MM');
 
-        const { data: transactions } = await supabase
-            .from("transacciones")
-            .select("monto, tipo, categoria")
-            .eq("user_id", user.id)
-            .gte("fecha", start)
-            .lte("fecha", end);
+        const monthTransactions = transactions.filter(t => t.fecha.startsWith(monthKey));
 
-        if (transactions) {
-            const income = transactions
-                .filter(t => t.tipo === 'Ingreso')
-                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+        const income = monthTransactions
+            .filter(t => t.tipo === 'Ingreso')
+            .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-            const investments = transactions
-                .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
-                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+        const investments = monthTransactions
+            .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
+            .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-            const expenses = transactions
-                .filter(t => t.tipo !== 'Ingreso' && t.tipo !== 'Inversión' && t.categoria !== 'Inversión')
-                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+        const expenses = monthTransactions
+            .filter(t => t.tipo !== 'Ingreso' && t.tipo !== 'Inversión' && t.categoria !== 'Inversión')
+            .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-            stats.push({
-                month: format(date, 'MMM yy', { locale: es as any }),
-                income,
-                expenses,
-                investments
-            });
-        }
+        stats.push({
+            month: format(date, 'MMM yy', { locale: es as any }),
+            income,
+            expenses,
+            investments
+        });
     }
 
     return stats;
 }
 
-export async function getYearlyStats(year: number): Promise<MonthlyStat[]> {
+export async function getYearlyStats(year: number, userId: string): Promise<MonthlyStat[]> {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    // No auth call needed
 
     const stats: MonthlyStat[] = [];
+    const start = `${year}-01-01`;
+    const end = `${year}-12-31`;
+
+    // Fetch whole year in one query
+    const { data: transactions } = await supabase
+        .from("transacciones")
+        .select("fecha, monto, tipo, categoria")
+        .eq("user_id", userId)
+        .gte("fecha", start)
+        .lte("fecha", end);
+
+    if (!transactions) return [];
 
     for (let month = 0; month < 12; month++) {
         const date = new Date(year, month, 1);
-        const start = format(startOfMonth(date), 'yyyy-MM-dd');
-        const end = format(endOfMonth(date), 'yyyy-MM-dd');
+        const monthPrefix = format(date, 'yyyy-MM');
 
-        const { data: transactions } = await supabase
-            .from("transacciones")
-            .select("monto, tipo, categoria")
-            .eq("user_id", user.id)
-            .gte("fecha", start)
-            .lte("fecha", end);
+        const monthTransactions = transactions.filter(t => t.fecha.startsWith(monthPrefix));
 
-        if (transactions) {
-            const income = transactions
-                .filter(t => t.tipo === 'Ingreso')
-                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+        const income = monthTransactions
+            .filter(t => t.tipo === 'Ingreso')
+            .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-            const investments = transactions
-                .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
-                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+        const investments = monthTransactions
+            .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
+            .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-            const expenses = transactions
-                .filter(t => t.tipo !== 'Ingreso' && t.tipo !== 'Inversión' && t.categoria !== 'Inversión')
-                .reduce((sum, t) => sum + Math.abs(t.monto), 0);
+        const expenses = monthTransactions
+            .filter(t => t.tipo !== 'Ingreso' && t.tipo !== 'Inversión' && t.categoria !== 'Inversión')
+            .reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-            stats.push({
-                month: format(date, 'MMM', { locale: es as any }),
-                income,
-                expenses,
-                investments
-            });
-        }
+        stats.push({
+            month: format(date, 'MMM', { locale: es as any }),
+            income,
+            expenses,
+            investments
+        });
     }
 
     return stats;
 }
 
-export async function getCategoryStats(year: number, month?: number): Promise<CategoryStat[]> {
+export async function getCategoryStats(year: number, userId: string, month?: number): Promise<CategoryStat[]> {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    // No auth call needed
 
     let query = supabase
         .from("transacciones")
         .select("monto, categoria, tipo")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
     if (month !== undefined) {
         const date = new Date(year, month - 1, 1);
