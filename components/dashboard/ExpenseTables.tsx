@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction"
-import { TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp } from "lucide-react"
+import { TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { deleteTransaction, excludeRecurringExpense } from "@/app/actions/transaction"
 import { toast } from "sonner"
@@ -99,6 +99,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-blue-500" />
                             Gastos Fijos
+                            <QuickAddButton tipo="Gasto fijo" />
                         </span>
                         <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
                             {formatCurrency(totalFixed)}
@@ -202,6 +203,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-rose-500" />
                             Gastos Variables
+                            <QuickAddButton tipo="Gasto variable" />
                         </span>
                         <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
                             {formatCurrency(totalVariable)}
@@ -283,6 +285,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                 <span className="flex items-center gap-2">
                                     <TrendingDown className="h-5 w-5 text-blue-400" />
                                     Inversiones / Ahorro activo
+                                    <QuickAddButton tipo="Inversión" />
                                 </span>
                                 <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
                                     {formatCurrency(totalInvestments)}
@@ -348,6 +351,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         <span className="flex items-center gap-2">
                             <TrendingDown className="h-5 w-5 text-emerald-500 rotate-180" />
                             Ingresos
+                            <QuickAddButton tipo="Ingreso" />
                         </span>
                         <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
                             {formatCurrency(totalIncome)}
@@ -418,6 +422,37 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                 </CardContent>
             </Card>
         </div >
+    );
+}
+
+// Botón de creación rápida por tipo
+function QuickAddButton({ tipo }: { tipo: 'Gasto fijo' | 'Gasto variable' | 'Inversión' | 'Ingreso' }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-all hover:scale-110 active:scale-95 ml-1"
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle>Nueva Transacción: {tipo}</DialogTitle>
+                    <DialogDescription>
+                        Añade un nuevo {tipo} manualmente a tu registro.
+                    </DialogDescription>
+                </DialogHeader>
+                <TransactionForm
+                    initialData={{ tipo } as any}
+                    onSuccess={() => setOpen(false)}
+                />
+            </DialogContent>
+        </Dialog>
     );
 }
 

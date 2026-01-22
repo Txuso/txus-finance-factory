@@ -51,7 +51,11 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             notas: initialData?.notas || "",
             monto: initialData?.monto || 0,
             fecha: initialData?.fecha ? new Date(initialData.fecha) : new Date(),
-            categoria: initialData?.categoria || CATEGORIAS[0],
+            categoria: initialData?.categoria || (
+                initialData?.tipo === 'Inversión' ? 'Inversión' :
+                    initialData?.tipo === 'Ingreso' ? 'Trabajo' :
+                        CATEGORIAS[0]
+            ),
             tipo: initialData?.tipo || 'Gasto variable',
             metodo_pago: initialData?.metodo_pago || METODOS_PAGO[0],
             es_automatico: initialData?.es_automatico || false,
