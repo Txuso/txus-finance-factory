@@ -217,38 +217,57 @@ export async function saveImportedTransactions(transactions: ParsedTransaction[]
 
         const cleanDescription = (desc: string) => {
             return desc
-                .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, '')
-                .replace(/\b\d{2}[/.-]\d{2}\b/g, '')
+                .replace(/^(OP\.?\s*NET|RECIBO|MOVIMIENTO|TRANSF\.?\s*A\s*FAVOR|ABONO)\s+/gi, '') // Prefijos bancarios comunes
+                .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, ' ')
+                .replace(/\b\d{2}[/.-]\d{2}\b/g, ' ')
+                .replace(/[*.,\-/_]/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim()
                 .toUpperCase();
         };
 
+        // De-duplicate the imported fixed expenses by their cleaned description
+        const uniqueFixedToProcess = new Map<string, ParsedTransaction>();
         for (const fe of fixedExpenses) {
-            const feClean = cleanDescription(fe.descripcion);
+            const clean = cleanDescription(fe.descripcion);
+            const existing = uniqueFixedToProcess.get(clean);
+            if (!existing || new Date(fe.fecha) > new Date(existing.fecha)) {
+                uniqueFixedToProcess.set(clean, fe);
+            }
+        }
 
-            // Find existing
-            const existing = allTemplates?.find(r => {
+        for (const [cleanName, fe] of uniqueFixedToProcess.entries()) {
+            // Find ALL matching templates in DB to handle existing duplicates
+            const matchingTemplates = (allTemplates || []).filter(r => {
                 const rClean = cleanDescription(r.descripcion);
-                return feClean === rClean || feClean.includes(rClean) || rClean.includes(feClean);
+                // Si coinciden o uno contiene al otro
+                return cleanName === rClean || cleanName.includes(rClean) || rClean.includes(cleanName);
             });
+
+            const dbTemplate = matchingTemplates[0];
+
+            // Cleanup: if there's more than one in the DB, delete the others
+            if (matchingTemplates.length > 1) {
+                const dupIds = matchingTemplates.slice(1).map(m => m.id);
+                await supabase.from('gastos_recurrentes').delete().in('id', dupIds);
+            }
 
             const recurringData = {
                 user_id: user.id,
-                // USE CLEAN NAME for the template to avoid "Master 12/2025"
-                descripcion: existing ? existing.descripcion : feClean || fe.descripcion,
+                descripcion: dbTemplate ? dbTemplate.descripcion : cleanName || fe.descripcion,
                 monto_estimado: Math.abs(fe.monto),
                 categoria: fe.categoria,
                 meses_aplicacion: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                 dia_cobro_estimado: new Date(fe.fecha).getDate(),
-                activo: true
+                activo: true,
+                fecha_inicio: dbTemplate?.fecha_inicio || format(new Date(fe.fecha), 'yyyy-MM-01')
             };
 
-            if (existing) {
+            if (dbTemplate) {
                 await supabase
                     .from('gastos_recurrentes')
                     .update(recurringData)
-                    .eq('id', existing.id)
+                    .eq('id', dbTemplate.id)
                     .eq('user_id', user.id);
             } else {
                 await supabase

@@ -42,8 +42,10 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
     // 3. Procesar Gastos Fijos
     const cleanDescription = (desc: string) => {
         return desc
-            .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, '')
-            .replace(/\b\d{2}[/.-]\d{2}\b/g, '')
+            .replace(/^(OP\.?\s*NET|RECIBO|MOVIMIENTO|TRANSF\.?\s*A\s*FAVOR|ABONO)\s+/gi, '')
+            .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, ' ')
+            .replace(/\b\d{2}[/.-]\d{2}\b/g, ' ')
+            .replace(/[*.,\-/_]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
             .toUpperCase();
