@@ -77,13 +77,14 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
         !matchedTransactionIds.includes(t.id)
     );
 
-    // Calcular Totales
+    // Calcular Totales (Usando lógica unificada: Importe pagado si existe, si no Importe estimado)
     const totalVariable = Math.abs(variableExpenses.reduce((sum, t) => sum + t.monto, 0));
     const totalInvestments = Math.abs(investmentTransactions.reduce((sum, t) => sum + t.monto, 0));
 
-    // Para gastos fijos (Total Mes Teórico):
-    const totalFixed = recurringExpenses.reduce((sum, item) => sum + item.monto_estimado, 0)
-        + extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
+    // Para gastos fijos (Total Real/Estimado):
+    const totalFixed = fixedExpensesList.reduce((sum, item) => {
+        return sum + (item.transaction ? Math.abs(item.transaction.monto) : item.definition.monto_estimado);
+    }, 0) + extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
     // 3. Ingresos
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');

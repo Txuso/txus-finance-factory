@@ -136,33 +136,45 @@ async function DashboardContent({
     const incomeTransactions = transactions.filter(t => t.tipo === 'Ingreso');
     const totalIncome = incomeTransactions.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-    const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable' && t.categoria !== 'Inversión');
-    const totalVariable = Math.abs(variableExpenses
-        .reduce((sum, t) => sum + t.monto, 0));
+    // --- LÓGICA DE CÁLCULO UNIFICADA ---
 
-    // ... fixed expenses logic ...
-    const matchedTransactionIds = recurringExpenses.map(recurring => {
+    // 1. Gastos Variables (Excluyendo Inversiones)
+    const variableExpenses = transactions.filter(t => t.tipo === 'Gasto variable' && t.categoria !== 'Inversión');
+    const totalVariable = Math.abs(variableExpenses.reduce((sum, t) => sum + t.monto, 0));
+
+    // 2. Gastos Fijos (Emparejamiento y Cálculo)
+    const matchedIds = new Set<string>();
+    let totalFixed = 0;
+
+    // Procesar gastos recurrentes (fijos esperados)
+    recurringExpenses.forEach(recurring => {
         const match = transactions.find(t =>
             t.tipo === 'Gasto fijo' &&
+            !matchedIds.has(t.id) &&
             (t.descripcion.toLowerCase().includes(recurring.descripcion.toLowerCase()) ||
-                (t.categoria === recurring.categoria && Math.abs(t.monto - recurring.monto_estimado) < 50))
+                (t.categoria === recurring.categoria && Math.abs(Math.abs(t.monto) - recurring.monto_estimado) < 50))
         );
-        return match?.id;
-    }).filter(Boolean);
 
+        if (match) {
+            totalFixed += Math.abs(match.monto);
+            matchedIds.add(match.id);
+        } else {
+            totalFixed += recurring.monto_estimado;
+        }
+    });
+
+    // Sumar gastos fijos extra (no emparejados con recurrentes)
     const extraFixedExpenses = transactions.filter(t =>
-        t.tipo === 'Gasto fijo' &&
-        !matchedTransactionIds.includes(t.id)
+        t.tipo === 'Gasto fijo' && !matchedIds.has(t.id)
     );
+    totalFixed += extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
 
-    const totalFixed = recurringExpenses.reduce((sum, item) => sum + item.monto_estimado, 0)
-        + extraFixedExpenses.reduce((sum, t) => sum + Math.abs(t.monto), 0);
-
+    // 3. Inversiones
     const totalInvestments = Math.abs(transactions
         .filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión')
         .reduce((sum, t) => sum + t.monto, 0));
 
-    // Lógica de objetivo de ahorro
+    // 4. Ahorro y Objetivo
     const actualSavings = totalIncome - (totalFixed + totalVariable);
     const savingsPercentage = totalIncome > 0 ? (actualSavings / totalIncome) : 0;
     const targetPercentage = config?.objetivo_ahorro_porcentaje || 0.20;
