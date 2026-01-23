@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { getDashboardData, getYearlyStats, getCategoryStats } from "@/lib/data/dashboard"
+import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights } from "@/lib/data/dashboard"
 import { createClient } from "@/lib/supabase/server"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
@@ -23,6 +23,7 @@ import { GlobalSearch } from "@/components/dashboard/GlobalSearch"
 import { PrivacyToggle } from "@/components/layout/PrivacyToggle"
 import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 import { DashboardTabsWrapper } from "@/components/dashboard/DashboardTabsWrapper"
+import { DashboardInsights } from "@/components/dashboard/DashboardInsights"
 
 interface DashboardPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -122,10 +123,11 @@ async function DashboardContent({
     const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
 
     // Parallelize pre-render data fetching
-    const [yearlyStats, categoryStats, dashboardData] = await Promise.all([
+    const [yearlyStats, categoryStats, dashboardData, insights] = await Promise.all([
         getYearlyStats(statsYear, userId),
         getCategoryStats(statsYear, userId),
-        getDashboardData(currentDate, userId)
+        getDashboardData(currentDate, userId),
+        getFinancialInsights(currentDate, userId)
     ]);
 
     const { transactions, recurringExpenses, config } = dashboardData;
@@ -207,6 +209,8 @@ async function DashboardContent({
                     />
                 </div>
             </div>
+
+            <DashboardInsights insights={insights} />
 
             <DashboardKPIs
                 totalIncome={totalIncome}

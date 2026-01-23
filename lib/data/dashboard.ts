@@ -13,6 +13,15 @@ export interface DashboardData {
     };
 }
 
+export interface FinancialInsight {
+    type: 'alert' | 'success' | 'tip' | 'salary';
+    title: string;
+    message: string;
+    value?: string;
+    impact?: 'positive' | 'negative' | 'neutral';
+    icon?: string;
+}
+
 export async function getDashboardData(date: Date, userId: string): Promise<DashboardData> {
     const supabase = await createClient();
 
@@ -253,4 +262,111 @@ export async function getCategoryStats(year: number, userId: string, month?: num
     return Object.entries(categories)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value);
+}
+
+export async function getFinancialInsights(currentDate: Date, userId: string): Promise<FinancialInsight[]> {
+    const supabase = await createClient();
+    const insights: FinancialInsight[] = [];
+
+    const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+    const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+
+    // History (Last 3 months for better averages)
+    const historyStart = format(startOfMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 3, 1)), 'yyyy-MM-dd');
+    const historyEnd = format(endOfMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)), 'yyyy-MM-dd');
+
+    const [currentRes, historyRes, configRes] = await Promise.all([
+        supabase.from("transacciones").select("*").eq("user_id", userId).gte("fecha", start).lte("fecha", end),
+        supabase.from("transacciones").select("*").eq("user_id", userId).gte("fecha", historyStart).lte("fecha", historyEnd),
+        supabase.from("configuracion").select("*").eq("user_id", userId).single()
+    ]);
+
+    const currentTrans = (currentRes.data || []) as Transaccion[];
+    const historyTrans = (historyRes.data || []) as Transaccion[];
+    const config = configRes.data;
+
+    if (currentTrans.length === 0 && historyTrans.length === 0) return [];
+
+    // --- 1. SALARY ANTICIPATION ---
+    const historicalSalaries = historyTrans.filter(t => t.tipo === 'Ingreso' && (t.descripcion.toUpperCase().includes('NOMINA') || t.monto > 1000));
+    const avgSalary = historicalSalaries.length > 0
+        ? historicalSalaries.reduce((sum, t) => sum + Math.abs(t.monto), 0) / 3 // Divide by 3 months
+        : 0;
+
+    const hasReceivedSalary = currentTrans.some(t => t.tipo === 'Ingreso' && (t.descripcion.toUpperCase().includes('NOMINA') || t.monto > 1000));
+
+    if (!hasReceivedSalary && avgSalary > 0) {
+        const currentBalance = currentTrans.reduce((sum, t) => sum + t.monto, 0);
+        const projectedBalance = currentBalance + avgSalary;
+
+        insights.push({
+            type: 'salary',
+            title: 'Nómina pendiente',
+            message: `Aún no detectamos tu nómina (~${avgSalary.toFixed(0)}€), pero con ella tu balance final será positivo.`,
+            value: `${projectedBalance.toFixed(0)}€`,
+            impact: 'neutral',
+            icon: 'Wallet'
+        });
+    }
+
+    // --- 2. CATEGORY ANOMALIES ---
+    const categories = Array.from(new Set(currentTrans.map(t => t.categoria)));
+    categories.forEach(cat => {
+        if (cat === 'Inversión' || cat === 'Otros') return;
+
+        const currentCatTotal = Math.abs(currentTrans.filter(t => t.categoria === cat).reduce((sum, t) => sum + t.monto, 0));
+        const historicalCatTotal = Math.abs(historyTrans.filter(t => t.categoria === cat).reduce((sum, t) => sum + t.monto, 0));
+        const avgCatMonthly = historicalCatTotal / 3;
+
+        if (avgCatMonthly > 50 && currentCatTotal > avgCatMonthly * 1.15) {
+            const diffPct = ((currentCatTotal / avgCatMonthly) - 1) * 100;
+            insights.push({
+                type: 'alert',
+                title: `Gasto en ${cat}`,
+                message: `Llevas un ${diffPct.toFixed(0)}% más de lo habitual en esta categoría.`,
+                value: `+${(currentCatTotal - avgCatMonthly).toFixed(0)}€`,
+                impact: 'negative',
+                icon: 'TrendingDown'
+            });
+        }
+    });
+
+    // --- 3. SAVINGS PROJECTION ---
+    const currentIncome = currentTrans.filter(t => t.tipo === 'Ingreso').reduce((sum, t) => sum + Math.abs(t.monto), 0);
+    const effectiveIncome = hasReceivedSalary ? currentIncome : currentIncome + avgSalary;
+    const currentExpenses = Math.abs(currentTrans.filter(t => t.tipo !== 'Ingreso').reduce((sum, t) => sum + t.monto, 0));
+
+    // Simple projection: expenses scale with days elapsed
+    const daysInMonth = endOfMonth(currentDate).getDate();
+    const dayOfMonth = currentDate.getDate();
+    const isCurrentMonth = currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
+
+    if (isCurrentMonth && dayOfMonth > 5 && effectiveIncome > 0) {
+        const projectedExpenses = (currentExpenses / dayOfMonth) * daysInMonth;
+        const projectedSavings = effectiveIncome - projectedExpenses;
+        const projectedPct = (projectedSavings / effectiveIncome) * 100;
+        const targetPct = (config?.objetivo_ahorro_porcentaje || 0.20) * 100;
+
+        if (projectedPct >= targetPct) {
+            insights.push({
+                type: 'success',
+                title: 'Objetivo a la vista',
+                message: `Sigues así y ahorrarás un ${projectedPct.toFixed(0)}% este mes.`,
+                value: `${projectedSavings.toFixed(0)}€`,
+                impact: 'positive',
+                icon: 'TrendingUp'
+            });
+        } else {
+            insights.push({
+                type: 'tip',
+                title: 'Ahorro ajustado',
+                message: `La proyección indica un ${(projectedPct < 0 ? 0 : projectedPct).toFixed(0)}% de ahorro. Necesitas reducir algún gasto variable.`,
+                value: `${(targetPct - projectedPct).toFixed(0)}% off`,
+                impact: 'negative',
+                icon: 'PieChart'
+            });
+        }
+    }
+
+    return insights;
 }
