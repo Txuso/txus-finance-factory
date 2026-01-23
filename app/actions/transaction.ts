@@ -255,6 +255,31 @@ export async function searchTransactions(query: string) {
     return { data: data || [] };
 }
 
+export async function saveLearningRule(pattern: string, category: string, type: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
+    const { error } = await supabase
+        .from("reglas_aprendizaje")
+        .upsert([{
+            user_id: user.id,
+            patron_descripcion: pattern.toUpperCase(),
+            categoria_destino: category,
+            tipo_destino: type
+        }], {
+            onConflict: 'user_id, patron_descripcion'
+        });
+
+    if (error) {
+        console.error("Error saving learning rule:", error);
+        return { error: "Error al guardar la regla de aprendizaje" };
+    }
+
+    return { success: true };
+}
+
 export async function excludeRecurringExpense(recurringId: string, monthDate: Date) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

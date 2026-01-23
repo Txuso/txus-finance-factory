@@ -31,10 +31,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { transactionSchema, type TransactionFormValues } from "@/lib/validations/transaction"
-import { createTransaction, updateTransaction } from "@/app/actions/transaction"
+import { createTransaction, updateTransaction, saveLearningRule } from "@/app/actions/transaction"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
 import { CATEGORIAS, TIPOS_TRANSACCION, METODOS_PAGO } from "@/lib/types/transaction"
+import { BrainCircuit } from "lucide-react"
 
 interface TransactionFormProps {
     initialData?: TransactionFormValues & { id?: string }
@@ -43,6 +44,7 @@ interface TransactionFormProps {
 
 export function TransactionForm({ initialData, onSuccess }: TransactionFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [shouldLearn, setShouldLearn] = useState(false)
 
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema) as any,
@@ -103,6 +105,12 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             if (result.error) {
                 toast.error(result.error)
             } else {
+                // Si el usuario marcó "aprender", guardamos la regla
+                if (shouldLearn) {
+                    await saveLearningRule(data.descripcion, data.categoria, data.tipo);
+                    toast.success("Regla de aprendizaje guardada");
+                }
+
                 toast.success(initialData?.id ? "Transacción actualizada" : "Transacción creada")
                 if (!initialData?.id) {
                     form.reset()
@@ -441,6 +449,26 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                             </p>
                         </div>
                     )}
+                </div>
+
+                {/* Smart Learning UI */}
+                <div className="p-4 bg-purple-50/30 dark:bg-purple-900/10 rounded-2xl border border-purple-100/50 dark:border-purple-800/20 backdrop-blur-sm flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                            <BrainCircuit className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-purple-900 dark:text-purple-100 uppercase tracking-wider">¿Misma categoría siempre?</p>
+                            <p className="text-[10px] text-muted-foreground leading-tight italic">Detectar automáticamente en futuras importaciones.</p>
+                        </div>
+                    </div>
+                    <input
+                        type="checkbox"
+                        id="smart-learn"
+                        checked={shouldLearn}
+                        onChange={(e) => setShouldLearn(e.target.checked)}
+                        className="h-5 w-5 rounded-md border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    />
                 </div>
 
                 <Button

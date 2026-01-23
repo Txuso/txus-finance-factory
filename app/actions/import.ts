@@ -50,11 +50,20 @@ export async function parseUpload(formData: FormData) {
             .lte('fecha', format(new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0), 'yyyy-MM-dd'));
 
         // 3. Enhancement: Detect Fixed Expenses from definitions
-        const { data: recurringList } = await supabase
-            .from('gastos_recurrentes')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('activo', true);
+        const [recurringResult, learningRulesResult] = await Promise.all([
+            supabase
+                .from('gastos_recurrentes')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('activo', true),
+            supabase
+                .from('reglas_aprendizaje')
+                .select('*')
+                .eq('user_id', user.id)
+        ]);
+
+        const recurringList = recurringResult.data;
+        const learningRules = learningRulesResult.data;
 
         const transactions: ParsedTransaction[] = [];
         const duplicates: ParsedTransaction[] = [];
@@ -101,6 +110,20 @@ export async function parseUpload(formData: FormData) {
                     tipo: 'Gasto fijo' as const,
                     categoria: matchTemplate.categoria
                 };
+            } else {
+                // 1.1 Check Learning Rules (Prioritize over static guess)
+                const matchRule = learningRules?.find(rule =>
+                    tClean.includes(rule.patron_descripcion) ||
+                    rule.patron_descripcion.includes(tClean)
+                );
+
+                if (matchRule) {
+                    processed = {
+                        ...t,
+                        tipo: matchRule.tipo_destino as any,
+                        categoria: matchRule.categoria_destino as any
+                    };
+                }
             }
 
             // 2. Comprehensive Deduplication
