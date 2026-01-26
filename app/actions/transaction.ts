@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { transactionSchema, type TransactionFormValues } from "@/lib/validations/transaction"
 import { revalidatePath } from "next/cache"
 import { format, startOfMonth } from "date-fns"
+import { cleanDescription as cleanDesc } from "@/lib/utils"
 
 export async function createTransaction(data: TransactionFormValues) {
     const supabase = await createClient()
@@ -19,40 +20,69 @@ export async function createTransaction(data: TransactionFormValues) {
         return { error: "Datos inválidos" }
     }
 
+    let finalRecurringId = data.recurring_id;
+
     // If it's a "Gasto fijo", we also want to ensure it exists in gastos_recurrentes
     if (validatedFields.data.tipo === 'Gasto fijo') {
-        const { meses_aplicacion, fecha_inicio, fecha_fin, ...baseData } = validatedFields.data;
+        const { meses_aplicacion, fecha_inicio, fecha_fin, recurring_id, ...baseData } = validatedFields.data;
 
-        // 1. Check if it already exists in recurrentes (by description match)
-        const { data: existing } = await supabase
-            .from("gastos_recurrentes")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("descripcion", baseData.descripcion)
-            .maybeSingle();
+        let templateToUpdate = null;
 
-        if (existing) {
+        if (recurring_id) {
+            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("id", recurring_id).eq("user_id", user.id).single();
+            templateToUpdate = data;
+        } else {
+            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("user_id", user.id).eq("descripcion", baseData.descripcion).maybeSingle();
+            templateToUpdate = data;
+        }
+
+        if (templateToUpdate) {
+            finalRecurringId = templateToUpdate.id;
+            const oldName = templateToUpdate.descripcion;
+            const newName = baseData.descripcion;
+            const oldClean = cleanDesc(oldName);
+
+            // 1. Update the template
             const updateData: any = {
+                descripcion: newName,
                 monto_estimado: Math.abs(baseData.monto),
                 categoria: baseData.categoria,
                 dia_cobro_estimado: new Date(baseData.fecha).getDate()
             };
 
-            // Only update start date if provided or if it helps consistency
-            if (fecha_inicio) {
-                updateData.fecha_inicio = format(fecha_inicio, 'yyyy-MM-dd');
-            }
-
-            // Handle end date (could be null)
+            if (fecha_inicio) updateData.fecha_inicio = format(fecha_inicio, 'yyyy-MM-dd');
             updateData.fecha_fin = fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null;
 
-            await supabase
-                .from("gastos_recurrentes")
-                .update(updateData)
-                .eq("id", existing.id)
-                .eq("user_id", user.id);
+            await supabase.from("gastos_recurrentes").update(updateData).eq("id", templateToUpdate.id).eq("user_id", user.id);
+
+            // 2. Global Rename & Link: Update ALL historical transactions that match
+            const { data: allFixed } = await supabase
+                .from("transacciones")
+                .select("*")
+                .eq("user_id", user.id)
+                .eq("tipo", "Gasto fijo");
+
+            if (allFixed) {
+                const toUpdate = allFixed.filter(t => {
+                    if (t.recurring_id === templateToUpdate.id) return true;
+                    const tClean = cleanDesc(t.descripcion);
+                    return tClean === oldClean || tClean.includes(oldClean) || oldClean.includes(tClean);
+                });
+
+                if (toUpdate.length > 0) {
+                    const ids = toUpdate.map(t => t.id);
+                    await supabase
+                        .from("transacciones")
+                        .update({
+                            descripcion: newName,
+                            recurring_id: templateToUpdate.id
+                        })
+                        .in("id", ids);
+                }
+            }
         } else {
-            await supabase
+            // New template
+            const { data: newTemplate } = await supabase
                 .from("gastos_recurrentes")
                 .insert([{
                     user_id: user.id,
@@ -63,11 +93,15 @@ export async function createTransaction(data: TransactionFormValues) {
                     fecha_inicio: format(fecha_inicio || startOfMonth(new Date(baseData.fecha)), 'yyyy-MM-dd'),
                     fecha_fin: fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null,
                     activo: true
-                }]);
+                }])
+                .select()
+                .single();
+
+            if (newTemplate) finalRecurringId = newTemplate.id;
         }
     }
 
-    const { meses_aplicacion, fecha_inicio, fecha_fin, ...transactionData } = validatedFields.data;
+    const { meses_aplicacion, fecha_inicio, fecha_fin, recurring_id, ...transactionData } = validatedFields.data;
 
     const { error } = await supabase
         .from("transacciones")
@@ -76,6 +110,7 @@ export async function createTransaction(data: TransactionFormValues) {
                 ...transactionData,
                 user_id: user.id,
                 fecha: transactionData.fecha.toISOString(),
+                recurring_id: finalRecurringId
             },
         ])
 
@@ -103,39 +138,81 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
         return { error: "Datos inválidos" }
     }
 
+    let finalRecurringId = data.recurring_id;
+
     // If it's a "Gasto fijo", sync with gastos_recurrentes
     if (validatedFields.data.tipo === 'Gasto fijo') {
-        const { meses_aplicacion, fecha_inicio, fecha_fin, ...baseData } = validatedFields.data;
+        const { meses_aplicacion, fecha_inicio, fecha_fin, recurring_id, ...baseData } = validatedFields.data;
 
-        const { data: existing } = await supabase
-            .from("gastos_recurrentes")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("descripcion", baseData.descripcion)
-            .maybeSingle();
+        let templateToUpdate = null;
 
-        if (existing) {
+        if (recurring_id) {
+            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("id", recurring_id).eq("user_id", user.id).single();
+            templateToUpdate = data;
+        } else {
+            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("user_id", user.id).eq("descripcion", baseData.descripcion).maybeSingle();
+            templateToUpdate = data;
+        }
+
+        if (templateToUpdate) {
+            finalRecurringId = templateToUpdate.id;
+            const oldName = templateToUpdate.descripcion;
+            const newName = baseData.descripcion;
+            const oldClean = cleanDesc(oldName);
+
+            // Update template
             await supabase
                 .from("gastos_recurrentes")
                 .update({
+                    descripcion: newName,
                     monto_estimado: Math.abs(baseData.monto),
                     categoria: baseData.categoria,
                     dia_cobro_estimado: new Date(baseData.fecha).getDate(),
                     fecha_inicio: fecha_inicio ? format(fecha_inicio, 'yyyy-MM-dd') : undefined,
                     fecha_fin: fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null,
                 })
-                .eq("id", existing.id)
+                .eq("id", templateToUpdate.id)
                 .eq("user_id", user.id);
+
+            // Global Rename and Link: Update ALL historical transactions that match the template
+            // We fetch them all to apply the cleanDescription logic
+            const { data: allFixed } = await supabase
+                .from("transacciones")
+                .select("*")
+                .eq("user_id", user.id)
+                .eq("tipo", "Gasto fijo");
+
+            if (allFixed) {
+                const toUpdate = allFixed.filter(t => {
+                    // Already linked?
+                    if (t.recurring_id === templateToUpdate.id) return true;
+                    // Fuzzy match with old name?
+                    const tClean = cleanDesc(t.descripcion);
+                    return tClean === oldClean || tClean.includes(oldClean) || oldClean.includes(tClean);
+                });
+
+                if (toUpdate.length > 0) {
+                    const ids = toUpdate.map(t => t.id);
+                    await supabase
+                        .from("transacciones")
+                        .update({
+                            descripcion: newName,
+                            recurring_id: templateToUpdate.id
+                        })
+                        .in("id", ids);
+                }
+            }
         }
     }
 
-    const { meses_aplicacion, fecha_inicio, fecha_fin, ...transactionData } = validatedFields.data;
+    const { meses_aplicacion, fecha_inicio, fecha_fin, recurring_id, ...transactionData } = validatedFields.data;
 
     const { error } = await supabase
         .from("transacciones")
         .update({
             ...transactionData,
             fecha: transactionData.fecha.toISOString(),
+            recurring_id: finalRecurringId
         })
         .eq("id", id)
         .eq("user_id", user.id)

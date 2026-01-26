@@ -27,6 +27,7 @@ export const transactionSchema = z.object({
     fecha_inicio: z.date().nullable().optional(),
     fecha_fin: z.date().nullable().optional(),
     id: z.string().nullable().optional(),
+    recurring_id: z.string().nullable().optional(),
 });
 
 export const recurringSchema = z.object({

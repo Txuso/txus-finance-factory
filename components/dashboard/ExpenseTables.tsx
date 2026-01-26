@@ -8,7 +8,7 @@ import { TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp, Plus } from "luci
 import { Button } from "@/components/ui/button"
 import { deleteTransaction, excludeRecurringExpense } from "@/app/actions/transaction"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, cleanDescription } from "@/lib/utils"
 import {
     Dialog,
     DialogContent,
@@ -40,25 +40,18 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
     const investmentTransactions = transactions.filter(t => t.tipo === 'Inversión' || t.categoria === 'Inversión');
 
     // 3. Procesar Gastos Fijos
-    const cleanDescription = (desc: string) => {
-        return desc
-            .replace(/^(OP\.?\s*NET|RECIBO|MOVIMIENTO|TRANSF\.?\s*A\s*FAVOR|ABONO)\s+/gi, '')
-            .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, ' ')
-            .replace(/\b\d{2}[/.-]\d{2}\b/g, ' ')
-            .replace(/[*.,\-/_]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .toUpperCase();
-    };
 
     const fixedExpensesList = recurringExpenses.map(recurring => {
         const recurringClean = cleanDescription(recurring.descripcion);
         const match = transactions.find(t => {
             if (t.tipo !== 'Gasto fijo') return false;
 
+            // 1. Primary match: recurring_id
+            if (t.recurring_id === recurring.id) return true;
+
+            // 2. Fallback match (legacy)
             const tClean = cleanDescription(t.descripcion);
             const matchesName = tClean === recurringClean || tClean.includes(recurringClean) || recurringClean.includes(tClean);
-
             const matchesAmount = Math.abs(Math.abs(t.monto) - recurring.monto_estimado) < 50;
 
             return matchesName && matchesAmount;
@@ -145,7 +138,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                                 {def.definition.descripcion}
                                                             </TableCell>
                                                             <TableCell className="py-2 text-xs text-muted-foreground italic">
-                                                                {def.transaction?.descripcion || "-"}
+                                                                {def.transaction?.notas || def.transaction?.descripcion || "-"}
                                                             </TableCell>
                                                             <TableCell className="py-2 text-right">
                                                                 {def.transaction ? (
@@ -168,7 +161,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                     return (
                                                         <TableRow key={`extra-${t.id}`} className="bg-slate-50/50">
                                                             <TableCell className="py-2 font-medium text-slate-600 italic">{t.descripcion}</TableCell>
-                                                            <TableCell className="py-2 text-xs text-muted-foreground font-medium">Gasto Extra</TableCell>
+                                                            <TableCell className="py-2 text-xs text-muted-foreground italic">{t.notas || "Gasto Extra"}</TableCell>
                                                             <TableCell className="py-2 text-right font-bold"><PrivacyBlur>{formatCurrency(Math.abs(t.monto))}</PrivacyBlur></TableCell>
                                                             <TableCell className="py-2">
                                                                 <TransactionActionsInner transaction={t} />
@@ -512,7 +505,8 @@ function TransactionActionsInner({ transaction, recurring }: { transaction?: Tra
             metodo_pago: transaction.metodo_pago,
             es_automatico: transaction.es_automatico,
             notas: transaction.notas,
-            meses_aplicacion: (transaction as any).meses_aplicacion || recurring?.meses_aplicacion
+            meses_aplicacion: (transaction as any).meses_aplicacion || recurring?.meses_aplicacion,
+            recurring_id: recurring?.id
         }
         : recurring
             ? {
@@ -524,6 +518,7 @@ function TransactionActionsInner({ transaction, recurring }: { transaction?: Tra
                 metodo_pago: 'Tarjeta' as const,
                 es_automatico: false,
                 meses_aplicacion: recurring.meses_aplicacion,
+                recurring_id: recurring.id
             }
             : undefined;
 

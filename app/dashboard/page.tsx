@@ -17,7 +17,7 @@ import Link from "next/link"
 import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart"
 import { SavingsGoalProgress } from "@/components/dashboard/SavingsGoalProgress"
 import { SavingsGrowthChart } from "@/components/dashboard/SavingsGrowthChart"
-import { cn } from "@/lib/utils"
+import { cn, cleanDescription } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { GlobalSearch } from "@/components/dashboard/GlobalSearch"
 import { PrivacyToggle } from "@/components/layout/PrivacyToggle"
@@ -148,12 +148,19 @@ async function DashboardContent({
 
     // Procesar gastos recurrentes (fijos esperados)
     recurringExpenses.forEach(recurring => {
-        const match = transactions.find(t =>
-            t.tipo === 'Gasto fijo' &&
-            !matchedIds.has(t.id) &&
-            (t.descripcion.toLowerCase().includes(recurring.descripcion.toLowerCase()) ||
-                (t.categoria === recurring.categoria && Math.abs(Math.abs(t.monto) - recurring.monto_estimado) < 50))
-        );
+        const recurringClean = cleanDescription(recurring.descripcion);
+        const match = transactions.find(t => {
+            if (t.tipo !== 'Gasto fijo' || matchedIds.has(t.id)) return false;
+
+            // 1. Primary match: recurring_id
+            if (t.recurring_id === recurring.id) return true;
+
+            // 2. Fallback match: fuzzy name + amount (for legacy transactions)
+            const tClean = cleanDescription(t.descripcion);
+            const matchesName = tClean === recurringClean || tClean.includes(recurringClean) || recurringClean.includes(tClean);
+            const matchesAmount = Math.abs(Math.abs(t.monto) - recurring.monto_estimado) < 50;
+            return matchesName && matchesAmount;
+        });
 
         if (match) {
             totalFixed += Math.abs(match.monto);

@@ -2,7 +2,8 @@
 
 import { parseBankStatement, ParsedTransaction } from "@/lib/parsers/pdf-parser";
 import { revalidatePath } from "next/cache";
-import { startOfMonth, format } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
+import { cleanDescription } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 
 export async function parseUpload(formData: FormData) {
@@ -67,16 +68,6 @@ export async function parseUpload(formData: FormData) {
 
         const transactions: ParsedTransaction[] = [];
         const duplicates: ParsedTransaction[] = [];
-
-        // Helper to remove dates and numbers that look like dates from strings
-        const cleanDescription = (desc: string) => {
-            return desc
-                .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, '') // Dates like 17/12/2025
-                .replace(/\b\d{2}[/.-]\d{2}\b/g, '')         // Dates like 17/12
-                .replace(/\s+/g, ' ')                        // Normalizar espacios
-                .trim()
-                .toUpperCase();
-        };
 
         // Helper to check if two descriptions are "similar enough"
         const areSimilar = (d1: string, d2: string) => {
@@ -186,47 +177,16 @@ export async function saveImportedTransactions(transactions: ParsedTransaction[]
         return { error: "No autorizado" };
     }
 
-    const dbTransactions = transactions.map(t => ({
-        user_id: user.id,
-        descripcion: t.descripcion,
-        monto: t.monto,
-        categoria: t.categoria,
-        tipo: t.tipo,
-        metodo_pago: 'Tarjeta' as const,
-        es_automatico: false,
-        fecha: new Date(t.fecha).toISOString()
-    }));
-
-    const { error: insertError } = await supabase
-        .from('transacciones')
-        .insert(dbTransactions);
-
-    if (insertError) {
-        console.error("Bulk Insert Error:", insertError);
-        return { error: "Error al guardar las transacciones" };
-    }
-
+    // 1. Process templates first to have IDs for linking
     const fixedExpenses = transactions.filter(t => t.tipo === 'Gasto fijo');
+    const templateMapping = new Map<string, string>(); // CleanedName -> TemplateID
 
     if (fixedExpenses.length > 0) {
-        // Fetch current templates
         const { data: allTemplates } = await supabase
             .from('gastos_recurrentes')
             .select('*')
             .eq('user_id', user.id);
 
-        const cleanDescription = (desc: string) => {
-            return desc
-                .replace(/^(OP\.?\s*NET|RECIBO|MOVIMIENTO|TRANSF\.?\s*A\s*FAVOR|ABONO)\s+/gi, '') // Prefijos bancarios comunes
-                .replace(/\d{2}[/.-]\d{2}[/.-]\d{2,4}/g, ' ')
-                .replace(/\b\d{2}[/.-]\d{2}\b/g, ' ')
-                .replace(/[*.,\-/_]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .toUpperCase();
-        };
-
-        // De-duplicate the imported fixed expenses by their cleaned description
         const uniqueFixedToProcess = new Map<string, ParsedTransaction>();
         for (const fe of fixedExpenses) {
             const clean = cleanDescription(fe.descripcion);
@@ -237,16 +197,13 @@ export async function saveImportedTransactions(transactions: ParsedTransaction[]
         }
 
         for (const [cleanName, fe] of uniqueFixedToProcess.entries()) {
-            // Find ALL matching templates in DB to handle existing duplicates
             const matchingTemplates = (allTemplates || []).filter(r => {
                 const rClean = cleanDescription(r.descripcion);
-                // Si coinciden o uno contiene al otro
                 return cleanName === rClean || cleanName.includes(rClean) || rClean.includes(cleanName);
             });
 
-            const dbTemplate = matchingTemplates[0];
+            let dbTemplate = matchingTemplates[0];
 
-            // Cleanup: if there's more than one in the DB, delete the others
             if (matchingTemplates.length > 1) {
                 const dupIds = matchingTemplates.slice(1).map(m => m.id);
                 await supabase.from('gastos_recurrentes').delete().in('id', dupIds);
@@ -270,11 +227,49 @@ export async function saveImportedTransactions(transactions: ParsedTransaction[]
                     .eq('id', dbTemplate.id)
                     .eq('user_id', user.id);
             } else {
-                await supabase
+                const { data: newT } = await supabase
                     .from('gastos_recurrentes')
-                    .insert([recurringData]);
+                    .insert([recurringData])
+                    .select()
+                    .single();
+                dbTemplate = newT as any;
+            }
+
+            if (dbTemplate) {
+                templateMapping.set(cleanName, dbTemplate.id);
             }
         }
+    }
+
+    // 2. Prepare and Insert Transactions with IDs
+    const dbTransactions = transactions.map(t => {
+        const clean = t.tipo === 'Gasto fijo' ? cleanDescription(t.descripcion) : null;
+        let recurring_id = null;
+
+        if (clean) {
+            recurring_id = templateMapping.get(clean) || null;
+        }
+
+        return {
+            user_id: user.id,
+            descripcion: t.descripcion,
+            monto: t.monto,
+            categoria: t.categoria,
+            tipo: t.tipo,
+            metodo_pago: 'Tarjeta' as const,
+            es_automatico: false,
+            fecha: new Date(t.fecha).toISOString(),
+            recurring_id
+        }
+    });
+
+    const { error: insertError } = await supabase
+        .from('transacciones')
+        .insert(dbTransactions);
+
+    if (insertError) {
+        console.error("Bulk Insert Error:", insertError);
+        return { error: "Error al guardar las transacciones" };
     }
 
     revalidatePath('/dashboard');

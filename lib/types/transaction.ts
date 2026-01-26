@@ -45,6 +45,7 @@ export interface Transaccion {
     tipo: TipoTransaccion;
     metodo_pago: MetodoPago;
     es_automatico: boolean;
+    recurring_id?: string;
     created_at?: string;
     updated_at?: string;
 }
