@@ -47,6 +47,8 @@ export async function getConfig() {
 export async function updateConfig(data: {
     objetivo_ahorro_porcentaje?: number;
     moneda?: string;
+    fondo_emergencia_objetivo?: number;
+    fondo_emergencia_actual?: number;
 }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

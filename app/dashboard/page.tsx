@@ -24,6 +24,7 @@ import { PrivacyToggle } from "@/components/layout/PrivacyToggle"
 import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 import { DashboardTabsWrapper } from "@/components/dashboard/DashboardTabsWrapper"
 import { DashboardInsights } from "@/components/dashboard/DashboardInsights"
+import { EmergencyFundCard } from "@/components/dashboard/EmergencyFundCard"
 
 interface DashboardPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -191,7 +192,7 @@ async function DashboardContent({
     return (
         <div className="space-y-4 sm:space-y-6">
             <div className="flex flex-col items-center space-y-2 text-center">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-6xl mt-2">
                     {/* Mensaje Motivacional de Objetivo */}
                     <div className={cn(
                         "flex items-center justify-center p-4 rounded-2xl border transition-all duration-500 shadow-xl relative overflow-hidden group",
@@ -225,6 +226,11 @@ async function DashboardContent({
                         currentSavings={actualSavings}
                         totalIncome={totalIncome}
                         targetPercentage={targetPercentage}
+                    />
+
+                    <EmergencyFundCard
+                        actual={Number(config?.fondo_emergencia_actual || 0)}
+                        objetivo={Number(config?.fondo_emergencia_objetivo || 12000)}
                     />
                 </div>
             </div>

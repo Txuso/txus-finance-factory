@@ -29,11 +29,11 @@ export async function createTransaction(data: TransactionFormValues) {
         let templateToUpdate = null;
 
         if (recurring_id) {
-            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("id", recurring_id).eq("user_id", user.id).single();
-            templateToUpdate = data;
+            const { data, error } = await supabase.from("gastos_recurrentes").select("*").eq("id", recurring_id).eq("user_id", user.id).single();
+            if (!error) templateToUpdate = data;
         } else {
-            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("user_id", user.id).eq("descripcion", baseData.descripcion).maybeSingle();
-            templateToUpdate = data;
+            const { data, error } = await supabase.from("gastos_recurrentes").select("*").eq("user_id", user.id).eq("descripcion", baseData.descripcion).maybeSingle();
+            if (!error) templateToUpdate = data;
         }
 
         if (templateToUpdate) {
@@ -53,16 +53,17 @@ export async function createTransaction(data: TransactionFormValues) {
             if (fecha_inicio) updateData.fecha_inicio = format(fecha_inicio, 'yyyy-MM-dd');
             updateData.fecha_fin = fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null;
 
-            await supabase.from("gastos_recurrentes").update(updateData).eq("id", templateToUpdate.id).eq("user_id", user.id);
+            const { error: upError } = await supabase.from("gastos_recurrentes").update(updateData).eq("id", templateToUpdate.id).eq("user_id", user.id);
+            if (upError) console.error("Error updating template:", upError);
 
             // 2. Global Rename & Link: Update ALL historical transactions that match
-            const { data: allFixed } = await supabase
+            const { data: allFixed, error: fetchErr } = await supabase
                 .from("transacciones")
                 .select("*")
                 .eq("user_id", user.id)
                 .eq("tipo", "Gasto fijo");
 
-            if (allFixed) {
+            if (!fetchErr && allFixed) {
                 const toUpdate = allFixed.filter(t => {
                     if (t.recurring_id === templateToUpdate.id) return true;
                     const tClean = cleanDesc(t.descripcion);
@@ -82,7 +83,7 @@ export async function createTransaction(data: TransactionFormValues) {
             }
         } else {
             // New template
-            const { data: newTemplate } = await supabase
+            const { data: newTemplate, error: insError } = await supabase
                 .from("gastos_recurrentes")
                 .insert([{
                     user_id: user.id,
@@ -97,6 +98,7 @@ export async function createTransaction(data: TransactionFormValues) {
                 .select()
                 .single();
 
+            if (insError) console.error("Error creating template:", insError);
             if (newTemplate) finalRecurringId = newTemplate.id;
         }
     }
@@ -147,11 +149,11 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
         let templateToUpdate = null;
 
         if (recurring_id) {
-            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("id", recurring_id).eq("user_id", user.id).single();
-            templateToUpdate = data;
+            const { data, error } = await supabase.from("gastos_recurrentes").select("*").eq("id", recurring_id).eq("user_id", user.id).single();
+            if (!error) templateToUpdate = data;
         } else {
-            const { data } = await supabase.from("gastos_recurrentes").select("*").eq("user_id", user.id).eq("descripcion", baseData.descripcion).maybeSingle();
-            templateToUpdate = data;
+            const { data, error } = await supabase.from("gastos_recurrentes").select("*").eq("user_id", user.id).eq("descripcion", baseData.descripcion).maybeSingle();
+            if (!error) templateToUpdate = data;
         }
 
         if (templateToUpdate) {
@@ -161,7 +163,7 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
             const oldClean = cleanDesc(oldName);
 
             // Update template
-            await supabase
+            const { error: upError } = await supabase
                 .from("gastos_recurrentes")
                 .update({
                     descripcion: newName,
@@ -174,15 +176,16 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
                 .eq("id", templateToUpdate.id)
                 .eq("user_id", user.id);
 
+            if (upError) console.error("Error updating template during transaction edit:", upError);
+
             // Global Rename and Link: Update ALL historical transactions that match the template
-            // We fetch them all to apply the cleanDescription logic
-            const { data: allFixed } = await supabase
+            const { data: allFixed, error: fetchErr } = await supabase
                 .from("transacciones")
                 .select("*")
                 .eq("user_id", user.id)
                 .eq("tipo", "Gasto fijo");
 
-            if (allFixed) {
+            if (!fetchErr && allFixed) {
                 const toUpdate = allFixed.filter(t => {
                     // Already linked?
                     if (t.recurring_id === templateToUpdate.id) return true;
@@ -202,6 +205,25 @@ export async function updateTransaction(id: string, data: TransactionFormValues)
                         .in("id", ids);
                 }
             }
+        } else {
+            // New template if user manually changed a variable to fixed and it didn't exist
+            const { data: newTemplate, error: insError } = await supabase
+                .from("gastos_recurrentes")
+                .insert([{
+                    user_id: user.id,
+                    descripcion: baseData.descripcion,
+                    monto_estimado: Math.abs(baseData.monto),
+                    categoria: baseData.categoria,
+                    dia_cobro_estimado: new Date(baseData.fecha).getDate(),
+                    fecha_inicio: format(fecha_inicio || startOfMonth(new Date(baseData.fecha)), 'yyyy-MM-dd'),
+                    fecha_fin: fecha_fin ? format(fecha_fin, 'yyyy-MM-dd') : null,
+                    activo: true
+                }])
+                .select()
+                .single();
+
+            if (insError) console.error("Error creating template during transaction edit:", insError);
+            if (newTemplate) finalRecurringId = newTemplate.id;
         }
     }
 

@@ -10,6 +10,8 @@ export interface DashboardData {
         id: string;
         objetivo_ahorro_porcentaje: number;
         moneda: string;
+        fondo_emergencia_objetivo: number;
+        fondo_emergencia_actual: number;
     };
 }
 
@@ -58,13 +60,13 @@ export async function getDashboardData(date: Date, userId: string): Promise<Dash
     const config = configResult.data;
 
     if (transError) {
-        console.error("Error fetching transactions:", transError);
+        console.error("Error fetching transactions:", JSON.stringify(transError, null, 2));
         throw new Error("Error fetching transactions");
     }
 
     if (recError) {
-        console.error("Error fetching recurring expenses:", recError);
-        throw new Error("Error fetching recurring expenses");
+        console.error("Error fetching recurring expenses details:", JSON.stringify(recError, null, 2));
+        throw new Error(`Error fetching recurring expenses: ${recError.message || 'Unknown'}`);
     }
 
     // 3. Fetch Exclusions for this month (In parallel with others if possible, but let's keep it clean)

@@ -16,7 +16,9 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false)
     const [config, setConfig] = useState({
         objetivo_ahorro_porcentaje: 0.20,
-        moneda: "€"
+        moneda: "€",
+        fondo_emergencia_objetivo: 12000,
+        fondo_emergencia_actual: 0
     })
 
     useEffect(() => {
@@ -27,7 +29,9 @@ export default function SettingsPage() {
             } else if (data) {
                 setConfig({
                     objetivo_ahorro_porcentaje: Number(data.objetivo_ahorro_porcentaje),
-                    moneda: data.moneda
+                    moneda: data.moneda,
+                    fondo_emergencia_objetivo: Number(data.fondo_emergencia_objetivo || 12000),
+                    fondo_emergencia_actual: Number(data.fondo_emergencia_actual || 0)
                 })
             }
             setLoading(false)
@@ -105,6 +109,57 @@ export default function SettingsPage() {
                                 * Recomendado: 20%. Esto se usará para mostrarte si has cumplido tu meta en el Dashboard.
                             </p>
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-rose-500/10 to-transparent">
+                        <div className="flex items-center gap-3">
+                            <Settings className="h-5 w-5 text-rose-500" />
+                            <CardTitle>Fondo de Emergencia</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Configura tu colchón de seguridad financiera.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="fondo_objetivo">Meta del Fondo</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="fondo_objetivo"
+                                        type="number"
+                                        value={config.fondo_emergencia_objetivo}
+                                        onChange={(e) => setConfig({
+                                            ...config,
+                                            fondo_emergencia_objetivo: Number(e.target.value)
+                                        })}
+                                        className="bg-background/50"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{config.moneda}</span>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="fondo_actual">Saldo Actual</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="fondo_actual"
+                                        type="number"
+                                        value={config.fondo_emergencia_actual}
+                                        onChange={(e) => setConfig({
+                                            ...config,
+                                            fondo_emergencia_actual: Number(e.target.value)
+                                        })}
+                                        className="bg-background/50"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{config.moneda}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic">
+                            * El Fondo de Emergencia recomendado suele ser de 3 a 6 meses de gastos fijos.
+                        </p>
                     </CardContent>
                 </Card>
 
