@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { transactionSchema, type TransactionFormValues } from "@/lib/validations/transaction"
 import { revalidatePath } from "next/cache"
 import { format, startOfMonth } from "date-fns"
+import { es } from "date-fns/locale"
 import { cleanDescription as cleanDesc } from "@/lib/utils"
 
 export async function createTransaction(data: TransactionFormValues) {
@@ -402,4 +403,51 @@ export async function excludeRecurringExpense(recurringId: string, monthDate: Da
 
     revalidatePath("/dashboard");
     return { success: true };
+}
+
+export async function getExportData(month?: number, year?: number) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: "No autorizado" }
+
+    const now = new Date()
+    const selectedMonth = month !== undefined ? month - 1 : now.getMonth()
+    const selectedYear = year || now.getFullYear()
+
+    const start = new Date(selectedYear, selectedMonth, 1)
+    const end = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59)
+
+    // Fetch transactions
+    const { data: transactions, error } = await supabase
+        .from("transacciones")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("fecha", start.toISOString())
+        .lte("fecha", end.toISOString())
+        .order("fecha", { ascending: false });
+
+    if (error) return { error: "Error al cargar las transacciones" }
+
+    // Fetch config for currency
+    const { data: config } = await supabase
+        .from("configuracion")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    // Basic calculation for KPIs
+    const income = transactions.filter(t => t.tipo === 'Ingreso').reduce((sum, t) => sum + Math.abs(t.monto), 0);
+    const expenses = transactions.filter(t => t.tipo === 'Gasto variable' || t.tipo === 'Gasto fijo').reduce((sum, t) => sum + Math.abs(t.monto), 0);
+    const investments = transactions.filter(t => t.tipo === 'Inversión').reduce((sum, t) => sum + Math.abs(t.monto), 0);
+    const savings = income - expenses;
+
+    return {
+        data: {
+            transactions: transactions || [],
+            monthLabel: format(start, "MMMM yyyy", { locale: es }),
+            kpis: { income, expenses, investments, savings },
+            moneda: config?.moneda || '€'
+        }
+    }
 }

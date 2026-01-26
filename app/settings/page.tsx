@@ -6,10 +6,20 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { getConfig, updateConfig } from "@/app/actions/config"
+import { getExportData } from "@/app/actions/transaction"
 import { signOut } from "@/app/actions/auth"
 import { toast } from "sonner"
-import { Settings, Save, Wallet, Target, ArrowLeft, LogOut } from "lucide-react"
+import { Settings, Save, Wallet, Target, ArrowLeft, LogOut, FileDown } from "lucide-react"
 import Link from "next/link"
+import { ExportButtons } from "@/components/dashboard/ExportButtons"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Transaccion } from "@/lib/types/transaction"
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true)
@@ -20,24 +30,52 @@ export default function SettingsPage() {
         fondo_emergencia_objetivo: 12000,
         fondo_emergencia_actual: 0
     })
+    const [exportData, setExportData] = useState<{
+        transactions: Transaccion[]
+        monthLabel: string
+        kpis: { income: number; expenses: number; investments: number; savings: number }
+    } | null>(null)
+    const [exportPeriod, setExportPeriod] = useState({
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear()
+    })
+    const [loadingExport, setLoadingExport] = useState(false)
 
     useEffect(() => {
-        async function loadConfig() {
-            const { data, error } = await getConfig()
-            if (error) {
-                toast.error(error)
-            } else if (data) {
+        async function loadData() {
+            const [configRes, exportRes] = await Promise.all([
+                getConfig(),
+                getExportData()
+            ])
+
+            if (configRes.error) toast.error(configRes.error)
+            else if (configRes.data) {
                 setConfig({
-                    objetivo_ahorro_porcentaje: Number(data.objetivo_ahorro_porcentaje),
-                    moneda: data.moneda,
-                    fondo_emergencia_objetivo: Number(data.fondo_emergencia_objetivo || 12000),
-                    fondo_emergencia_actual: Number(data.fondo_emergencia_actual || 0)
+                    objetivo_ahorro_porcentaje: Number(configRes.data.objetivo_ahorro_porcentaje),
+                    moneda: configRes.data.moneda,
+                    fondo_emergencia_objetivo: Number(configRes.data.fondo_emergencia_objetivo || 12000),
+                    fondo_emergencia_actual: Number(configRes.data.fondo_emergencia_actual || 0)
                 })
             }
+
+            if (exportRes.data) {
+                setExportData(exportRes.data)
+            }
+
             setLoading(false)
         }
-        loadConfig()
+        loadData()
     }, [])
+
+    useEffect(() => {
+        async function updateExportData() {
+            setLoadingExport(true)
+            const res = await getExportData(exportPeriod.month, exportPeriod.year)
+            if (res.data) setExportData(res.data)
+            setLoadingExport(false)
+        }
+        if (!loading) updateExportData()
+    }, [exportPeriod, loading])
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -184,6 +222,80 @@ export default function SettingsPage() {
                                 className="bg-background/50"
                             />
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-amber-500/10 to-transparent">
+                        <div className="flex items-center gap-3">
+                            <FileDown className="h-5 w-5 text-amber-500" />
+                            <CardTitle>Exportación de Datos</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Extrae tu información financiera en formatos profesionales para auditoría personal o análisis detallado.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Mes a exportar</Label>
+                                <Select
+                                    value={exportPeriod.month.toString()}
+                                    onValueChange={(val) => setExportPeriod({ ...exportPeriod, month: parseInt(val) })}
+                                >
+                                    <SelectTrigger className="bg-background/50">
+                                        <SelectValue placeholder="Mes" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[
+                                            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                                            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+                                        ].map((m, i) => (
+                                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                                {m}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Año</Label>
+                                <Select
+                                    value={exportPeriod.year.toString()}
+                                    onValueChange={(val) => setExportPeriod({ ...exportPeriod, year: parseInt(val) })}
+                                >
+                                    <SelectTrigger className="bg-background/50">
+                                        <SelectValue placeholder="Año" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[2024, 2025, 2026].map((y) => (
+                                            <SelectItem key={y} value={y.toString()}>
+                                                {y}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-800/50">
+                            <div className="space-y-1">
+                                <p className="text-sm font-bold">Resumen de {exportData?.monthLabel || "Seleccionado"}</p>
+                                <p className="text-xs text-muted-foreground italic">Incluye transacciones, KPIs de ahorro y desglose por categorías.</p>
+                            </div>
+                            {!loadingExport && exportData ? (
+                                <ExportButtons
+                                    transactions={exportData.transactions}
+                                    monthLabel={exportData.monthLabel}
+                                    kpis={exportData.kpis}
+                                />
+                            ) : (
+                                <div className="h-9 w-24 animate-pulse bg-slate-200 dark:bg-slate-700 rounded-md" />
+                            )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic">
+                            * Los reportes se generan localmente en tu navegador de forma segura.
+                        </p>
                     </CardContent>
                 </Card>
 

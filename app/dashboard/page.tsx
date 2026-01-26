@@ -25,6 +25,8 @@ import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 import { DashboardTabsWrapper } from "@/components/dashboard/DashboardTabsWrapper"
 import { DashboardInsights } from "@/components/dashboard/DashboardInsights"
 import { EmergencyFundCard } from "@/components/dashboard/EmergencyFundCard"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
 interface DashboardPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -90,8 +92,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <ImportDialog />
                 </div>
 
-                <div className="w-full max-w-md pt-2">
-                    <MonthSelectorWrapper initialDate={currentDate} />
+                <div className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                    <div className="flex-1 w-full sm:w-auto">
+                        <MonthSelectorWrapper initialDate={currentDate} />
+                    </div>
                 </div>
             </div>
 
