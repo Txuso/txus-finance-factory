@@ -9,7 +9,7 @@ export interface ParsedTransaction {
     tipo: 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión';
 }
 
-export function guessCategory(description: string): Categoria {
+function guessCategory(description: string): Categoria {
     const desc = description.toUpperCase();
 
     // Trabajo / Ingresos
@@ -51,7 +51,7 @@ export function guessCategory(description: string): Categoria {
     return 'Otros';
 }
 
-export function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
+function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
     const desc = description.toUpperCase();
 
     if (amount > 0) return 'Ingreso';

@@ -153,6 +153,9 @@ async function DashboardContent({
 
     // Procesar gastos recurrentes (fijos esperados)
     recurringExpenses.forEach(recurring => {
+        // Skip recurring items that are investments, they are handled separately
+        if (recurring.categoria === 'Inversión') return;
+
         const recurringClean = cleanDescription(recurring.descripcion);
         const match = transactions.find(t => {
             if (t.tipo !== 'Gasto fijo' || matchedIds.has(t.id)) return false;

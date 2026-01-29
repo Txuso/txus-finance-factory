@@ -27,11 +27,13 @@ export function SavingsGrowthChart({ data, title, description }: SavingsGrowthCh
     // Process data to include savings and accumulated savings
     let accumulated = 0;
     const chartData = data.map(item => {
-        const monthlySavings = item.income - item.expenses;
-        accumulated += monthlySavings;
+        const totalSavings = item.income - item.expenses;
+        const netSavings = totalSavings - item.investments;
+        accumulated += totalSavings;
         return {
             ...item,
-            monthlySavings,
+            netSavings: netSavings > 0 ? netSavings : 0,
+            investmentSavings: item.investments,
             accumulatedSavings: accumulated,
         }
     });
@@ -99,9 +101,9 @@ export function SavingsGrowthChart({ data, title, description }: SavingsGrowthCh
                                     border: 'none',
                                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                 }}
-                                formatter={(value: any) => {
+                                formatter={(value: any, name: string | undefined) => {
                                     const numValue = typeof value === 'number' ? value : 0;
-                                    return [formatCurrency(numValue), ""];
+                                    return [formatCurrency(numValue), name || ""];
                                 }}
                             />
                             <Legend verticalAlign="top" height={36} />
@@ -113,14 +115,25 @@ export function SavingsGrowthChart({ data, title, description }: SavingsGrowthCh
                                 fill="#f43f5e"
                                 radius={[4, 4, 0, 0]}
                                 barSize={40}
-                                opacity={0.6}
+                                opacity={0.4}
                             />
 
                             <Bar
                                 yAxisId="left"
-                                dataKey="monthlySavings"
-                                name="Ahorro Mensual"
+                                dataKey="netSavings"
+                                name="Ahorro Neto"
+                                stackId="savings"
                                 fill="#10b981"
+                                radius={[0, 0, 0, 0]}
+                                barSize={40}
+                            />
+
+                            <Bar
+                                yAxisId="left"
+                                dataKey="investmentSavings"
+                                name="Inversión"
+                                stackId="savings"
+                                fill="#3b82f6"
                                 radius={[4, 4, 0, 0]}
                                 barSize={40}
                             />
