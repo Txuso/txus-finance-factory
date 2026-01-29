@@ -9,14 +9,14 @@ export interface ParsedTransaction {
     tipo: 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión';
 }
 
-function guessCategory(description: string): Categoria {
+export function guessCategory(description: string): Categoria {
     const desc = description.toUpperCase();
 
     // Trabajo / Ingresos
     if (desc.includes('NOMINA')) return 'Trabajo';
 
     // Inversiones
-    if (desc.includes('INDEXA') || desc.includes('REVOLUT')) return 'Inversión';
+    if (desc.includes('INDEXA') || desc.includes('REVOLUT') || desc.includes('AHORROPENSION')) return 'Inversión';
 
     // Supermercado
     if (desc.includes('MERCADONA') || desc.includes('COALIMENT') || desc.includes('MARKET') ||
@@ -51,13 +51,13 @@ function guessCategory(description: string): Categoria {
     return 'Otros';
 }
 
-function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
+export function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
     const desc = description.toUpperCase();
 
     if (amount > 0) return 'Ingreso';
 
     // Inversiones
-    if (desc.includes('INDEXA') || desc.includes('REVOLUT')) return 'Inversión';
+    if (desc.includes('INDEXA') || desc.includes('REVOLUT') || desc.includes('AHORROPENSION')) return 'Inversión';
 
     // Ingresos específicos por nombre (aunque el monto debería ser > 0, por si acaso)
     if (desc.includes('NOMINA') || desc.includes('TRANSF. MANGOPAY')) return 'Ingreso';
