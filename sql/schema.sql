@@ -20,7 +20,7 @@ DO $$ BEGIN
     CREATE TYPE categoria_enum AS ENUM (
       'Vivienda', 'Supermercado', 'Transporte', 'Salud', 
       'Educación', 'Ocio', 'Comunicaciones', 'Suscripciones', 
-      'Imprevistos', 'Inversión', 'Otros', 'Trabajo', 'Videojuegos'
+      'Imprevistos', 'Inversión', 'Otros', 'Trabajo', 'Videojuegos', 'Ropa'
     );
 EXCEPTION
     WHEN duplicate_object THEN null;

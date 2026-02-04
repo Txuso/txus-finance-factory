@@ -11,7 +11,8 @@ export const CATEGORIAS = [
     'Inversión',
     'Otros',
     'Trabajo',
-    'Videojuegos'
+    'Videojuegos',
+    'Ropa'
 ] as const;
 
 export type Categoria = typeof CATEGORIAS[number];
