@@ -1,5 +1,6 @@
 import PDFParser from "pdf2json";
 import { Categoria, CATEGORIAS } from '@/lib/types/transaction';
+import { LearningRule } from "@/lib/types/rules";
 
 export interface ParsedTransaction {
     fecha: Date;
@@ -9,9 +10,17 @@ export interface ParsedTransaction {
     tipo: 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión';
 }
 
-function guessCategory(description: string): Categoria {
+function guessCategory(description: string, rules: LearningRule[] = []): Categoria {
     const desc = description.toUpperCase();
 
+    // 1. Check Custom Rules first
+    for (const rule of rules) {
+        if (desc.includes(rule.patron_descripcion.toUpperCase())) {
+            return rule.categoria_destino;
+        }
+    }
+
+    // 2. Fallback to hardcoded logic
     // Trabajo / Ingresos
     if (desc.includes('NOMINA')) return 'Trabajo';
 
@@ -51,11 +60,19 @@ function guessCategory(description: string): Categoria {
     return 'Otros';
 }
 
-function guessType(description: string, amount: number): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
+function guessType(description: string, amount: number, rules: LearningRule[] = []): 'Gasto variable' | 'Gasto fijo' | 'Ingreso' | 'Inversión' {
     const desc = description.toUpperCase();
 
     if (amount > 0) return 'Ingreso';
 
+    // 1. Check Custom Rules first
+    for (const rule of rules) {
+        if (desc.includes(rule.patron_descripcion.toUpperCase())) {
+            return rule.tipo_destino;
+        }
+    }
+
+    // 2. Fallback to hardcoded logic
     // Inversiones
     if (desc.includes('INDEXA') || desc.includes('REVOLUT') || desc.includes('AHORROPENSION')) return 'Inversión';
 
@@ -77,7 +94,7 @@ function guessType(description: string, amount: number): 'Gasto variable' | 'Gas
     return 'Gasto variable';
 }
 
-export async function parseBankStatement(buffer: Buffer): Promise<ParsedTransaction[]> {
+export async function parseBankStatement(buffer: Buffer, rules: LearningRule[] = []): Promise<ParsedTransaction[]> {
     return new Promise((resolve, reject) => {
         const pdfParser = new PDFParser(null, 1 as any); // 1 = Raw Text enabled
 
@@ -159,8 +176,8 @@ export async function parseBankStatement(buffer: Buffer): Promise<ParsedTransact
                                 fecha: date,
                                 descripcion: description,
                                 monto: amount,
-                                categoria: guessCategory(description),
-                                tipo: guessType(description, amount)
+                                categoria: guessCategory(description, rules),
+                                tipo: guessType(description, amount, rules)
                             });
                         }
                     }

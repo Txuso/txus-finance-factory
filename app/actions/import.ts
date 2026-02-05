@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { cleanDescription } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+import { getRules } from "@/app/actions/rules";
 
 export async function parseUpload(formData: FormData) {
     const supabase = await createClient()
@@ -28,7 +29,11 @@ export async function parseUpload(formData: FormData) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        let allParsed = await parseBankStatement(buffer);
+        // 1. Fetch User Rules
+        const rulesRes = await getRules();
+        const rules = rulesRes.error ? [] : rulesRes.data || [];
+
+        let allParsed = await parseBankStatement(buffer, rules);
 
         if (allParsed.length === 0) {
             return { success: true, data: { transactions: [], duplicates: [] } };

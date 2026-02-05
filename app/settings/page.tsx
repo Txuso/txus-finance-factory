@@ -9,7 +9,7 @@ import { getConfig, updateConfig } from "@/app/actions/config"
 import { getExportData } from "@/app/actions/transaction"
 import { signOut } from "@/app/actions/auth"
 import { toast } from "sonner"
-import { Settings, Save, Wallet, Target, ArrowLeft, LogOut, FileDown } from "lucide-react"
+import { Settings, Save, Target, ArrowLeft, LogOut, FileDown } from "lucide-react"
 import Link from "next/link"
 import { ExportButtons } from "@/components/dashboard/ExportButtons"
 import {
@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Transaccion } from "@/lib/types/transaction"
+import { ParsingRules } from "@/components/settings/ParsingRules"
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true)
@@ -113,117 +114,97 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
-                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-blue-500/10 to-transparent">
-                        <div className="flex items-center gap-3">
-                            <Target className="h-5 w-5 text-blue-500" />
-                            <CardTitle>Objetivo de Ahorro</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Define qué porcentaje de tus ingresos quieres ahorrar cada mes.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="objetivo">Porcentaje de Ahorro (%)</Label>
-                            <div className="relative">
-                                <Input
-                                    id="objetivo"
-                                    type="number"
-                                    step="1"
-                                    min="0"
-                                    max="100"
-                                    value={Math.round(config.objetivo_ahorro_porcentaje * 100)}
-                                    onChange={(e) => setConfig({
-                                        ...config,
-                                        objetivo_ahorro_porcentaje: Number(e.target.value) / 100
-                                    })}
-                                    className="bg-background/50"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+            <div className="space-y-6">
+                <form id="config-form" onSubmit={handleSave} className="space-y-6">
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
+                        <CardHeader className="bg-gradient-to-r from-blue-500/10 to-transparent">
+                            <div className="flex items-center gap-3">
+                                <Target className="h-5 w-5 text-blue-500" />
+                                <CardTitle>Objetivo de Ahorro</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Define qué porcentaje de tus ingresos quieres ahorrar cada mes.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="objetivo">Porcentaje de Ahorro (%)</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="objetivo"
+                                        type="number"
+                                        step="1"
+                                        min="0"
+                                        max="100"
+                                        value={Math.round(config.objetivo_ahorro_porcentaje * 100)}
+                                        onChange={(e) => setConfig({
+                                            ...config,
+                                            objetivo_ahorro_porcentaje: Number(e.target.value) / 100
+                                        })}
+                                        className="bg-background/50"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground italic">
+                                    * Recomendado: 20%. Esto se usará para mostrarte si has cumplido tu meta en el Dashboard.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
+                        <CardHeader className="bg-gradient-to-r from-rose-500/10 to-transparent">
+                            <div className="flex items-center gap-3">
+                                <Settings className="h-5 w-5 text-rose-500" />
+                                <CardTitle>Fondo de Emergencia</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Configura tu colchón de seguridad financiera.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="fondo_objetivo">Meta del Fondo</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="fondo_objetivo"
+                                            type="number"
+                                            value={config.fondo_emergencia_objetivo}
+                                            onChange={(e) => setConfig({
+                                                ...config,
+                                                fondo_emergencia_objetivo: Number(e.target.value)
+                                            })}
+                                            className="bg-background/50"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{config.moneda}</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="fondo_actual">Saldo Actual</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="fondo_actual"
+                                            type="number"
+                                            value={config.fondo_emergencia_actual}
+                                            onChange={(e) => setConfig({
+                                                ...config,
+                                                fondo_emergencia_actual: Number(e.target.value)
+                                            })}
+                                            className="bg-background/50"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{config.moneda}</span>
+                                    </div>
+                                </div>
                             </div>
                             <p className="text-[10px] text-muted-foreground italic">
-                                * Recomendado: 20%. Esto se usará para mostrarte si has cumplido tu meta en el Dashboard.
+                                * El Fondo de Emergencia recomendado suele ser de 3 a 6 meses de gastos fijos.
                             </p>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </form>
 
-                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-rose-500/10 to-transparent">
-                        <div className="flex items-center gap-3">
-                            <Settings className="h-5 w-5 text-rose-500" />
-                            <CardTitle>Fondo de Emergencia</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Configura tu colchón de seguridad financiera.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="fondo_objetivo">Meta del Fondo</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="fondo_objetivo"
-                                        type="number"
-                                        value={config.fondo_emergencia_objetivo}
-                                        onChange={(e) => setConfig({
-                                            ...config,
-                                            fondo_emergencia_objetivo: Number(e.target.value)
-                                        })}
-                                        className="bg-background/50"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{config.moneda}</span>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="fondo_actual">Saldo Actual</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="fondo_actual"
-                                        type="number"
-                                        value={config.fondo_emergencia_actual}
-                                        onChange={(e) => setConfig({
-                                            ...config,
-                                            fondo_emergencia_actual: Number(e.target.value)
-                                        })}
-                                        className="bg-background/50"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{config.moneda}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground italic">
-                            * El Fondo de Emergencia recomendado suele ser de 3 a 6 meses de gastos fijos.
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                    <CardHeader className="bg-gradient-to-r from-emerald-500/10 to-transparent">
-                        <div className="flex items-center gap-3">
-                            <Wallet className="h-5 w-5 text-emerald-500" />
-                            <CardTitle>Preferencia de Moneda</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Selecciona la moneda principal de la aplicación.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="moneda">Símbolo de Moneda</Label>
-                            <Input
-                                id="moneda"
-                                value={config.moneda}
-                                onChange={(e) => setConfig({ ...config, moneda: e.target.value })}
-                                placeholder="€, $, etc."
-                                className="bg-background/50"
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
+                <ParsingRules />
 
                 <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-hidden">
                     <CardHeader className="bg-gradient-to-r from-amber-500/10 to-transparent">
@@ -312,6 +293,7 @@ export default function SettingsPage() {
 
                     <Button
                         type="submit"
+                        form="config-form"
                         disabled={saving}
                         className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transform transition-all hover:-translate-y-0.5"
                     >
@@ -323,7 +305,7 @@ export default function SettingsPage() {
                         )}
                     </Button>
                 </div>
-            </form>
+            </div>
         </div>
     )
 }
