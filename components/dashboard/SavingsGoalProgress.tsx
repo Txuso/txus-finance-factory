@@ -13,10 +13,14 @@ interface SavingsGoalProgressProps {
 }
 
 export function SavingsGoalProgress({ currentSavings, totalIncome, targetPercentage }: SavingsGoalProgressProps) {
-    const currentPercentage = totalIncome > 0 ? (currentSavings / totalIncome) : 0;
-    const progressValue = Math.min(100, Math.max(0, (currentPercentage / targetPercentage) * 100));
+    const hasIncome = totalIncome > 0;
+    const currentPercentage = hasIncome ? (currentSavings / totalIncome) : 0;
+    const isNegative = currentPercentage < 0;
+    // Clamp between 0-100% for the progress bar — never show negative progress
+    const displayPct = Math.max(0, currentPercentage);
+    const progressValue = Math.min(100, Math.max(0, (displayPct / targetPercentage) * 100));
 
-    const isTargetMet = currentPercentage >= targetPercentage;
+    const isTargetMet = hasIncome && currentPercentage >= targetPercentage;
 
     return (
         <Card className="border border-slate-200/50 dark:border-slate-800/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm overflow-hidden relative transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)]">
@@ -32,7 +36,9 @@ export function SavingsGoalProgress({ currentSavings, totalIncome, targetPercent
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-2xl font-black bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 dark:from-white dark:via-slate-300 dark:to-white bg-clip-text text-transparent leading-none tracking-tighter">
-                            <PrivacyBlur>{(currentPercentage * 100).toFixed(1)}%</PrivacyBlur>
+                            <PrivacyBlur>
+                                {!hasIncome ? '—' : isNegative ? '0%' : `${(currentPercentage * 100).toFixed(1)}%`}
+                            </PrivacyBlur>
                         </p>
                         <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider mt-1">
                             Meta: {(targetPercentage * 100).toFixed(0)}%
@@ -40,11 +46,15 @@ export function SavingsGoalProgress({ currentSavings, totalIncome, targetPercent
                     </div>
                     <div className={cn(
                         "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest transition-all shadow-sm",
-                        isTargetMet
-                            ? "bg-emerald-500 text-white shadow-emerald-200 dark:shadow-none"
-                            : "bg-amber-500 text-white shadow-amber-200 dark:shadow-none"
+                        !hasIncome
+                            ? "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                            : isNegative
+                                ? "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400"
+                                : isTargetMet
+                                    ? "bg-emerald-500 text-white shadow-emerald-200 dark:shadow-none"
+                                    : "bg-amber-500 text-white shadow-amber-200 dark:shadow-none"
                     )}>
-                        {isTargetMet ? "COMPLETO" : "EN CURSO"}
+                        {!hasIncome ? "SIN INGRESO" : isNegative ? "NEGATIVO" : isTargetMet ? "COMPLETO" : "EN CURSO"}
                     </div>
                 </div>
 
@@ -53,7 +63,7 @@ export function SavingsGoalProgress({ currentSavings, totalIncome, targetPercent
                         <div
                             className={cn(
                                 "h-full transition-all duration-1000 ease-out rounded-full",
-                                isTargetMet ? "bg-emerald-500" : "bg-amber-500"
+                                !hasIncome ? "bg-slate-300 dark:bg-slate-600" : isNegative ? "bg-rose-300 dark:bg-rose-700" : isTargetMet ? "bg-emerald-500" : "bg-amber-500"
                             )}
                             style={{ width: `${progressValue}%` }}
                         />
@@ -61,7 +71,7 @@ export function SavingsGoalProgress({ currentSavings, totalIncome, targetPercent
                     <div className="flex justify-between text-[9px] font-bold text-muted-foreground/40 px-0.5 tracking-tight uppercase">
                         <span>0%</span>
                         <span>meta: {((targetPercentage * 100)).toFixed(0)}%</span>
-                        <span>{(Math.max(currentPercentage, targetPercentage) * 100).toFixed(0)}%</span>
+                        <span>{(Math.max(displayPct, targetPercentage) * 100).toFixed(0)}%</span>
                     </div>
                 </div>
             </CardContent>

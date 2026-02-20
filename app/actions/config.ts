@@ -41,6 +41,15 @@ export async function getConfig() {
         data = newConfig;
     }
 
+    // Auto-correct legacy $ currency symbol → €
+    if (data && data.moneda === '$') {
+        await supabase
+            .from("configuracion")
+            .update({ moneda: '€' })
+            .eq("user_id", user.id);
+        data = { ...data, moneda: '€' };
+    }
+
     return { data };
 }
 

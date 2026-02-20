@@ -141,10 +141,10 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                     </PrivacyBlur>
                                 </div>
                                 <Badge className={`shrink-0 text-[10px] px-2 py-0.5 ${daysUntil === 0
-                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200'
-                                        : daysUntil !== null && daysUntil > 0
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200'
-                                            : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200'
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200'
+                                    : daysUntil !== null && daysUntil > 0
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200'
+                                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200'
                                     }`}>
                                     {daysUntil === 0 ? 'Hoy' : daysUntil !== null && daysUntil > 0 ? `en ${daysUntil} días` : 'Mes prox.'}
                                 </Badge>
@@ -186,7 +186,18 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                     return (
                                                         <TableRow key={`def-${def.definition.id}`}>
                                                             <TableCell className="py-2 font-medium text-slate-700 dark:text-slate-200">
-                                                                {def.definition.descripcion}
+                                                                <div className="flex items-center gap-2">
+                                                                    {def.definition.descripcion}
+                                                                    {def.status === 'paid' ? (
+                                                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 shrink-0">
+                                                                            ✓ Pagado
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800 shrink-0">
+                                                                            ⏳ Pendiente
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell className="py-2 text-center">
                                                                 {def.definition.dia_cobro_estimado ? (
