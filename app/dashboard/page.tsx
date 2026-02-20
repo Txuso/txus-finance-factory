@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights } from "@/lib/data/dashboard"
+import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights, getLastImportDate } from "@/lib/data/dashboard"
 import { createClient } from "@/lib/supabase/server"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
@@ -51,6 +51,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const { data: { user } } = await supabase.auth.getUser();
     const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || "Josu";
     const firstName = userName.split(' ')[0];
+    const userId = user?.id;
+    const lastImportDate = userId ? await getLastImportDate(userId) : null;
     const hour = now.getHours();
     let greeting = "¡Hola";
     if (hour >= 6 && hour < 12) greeting = "Buenos días";
@@ -89,7 +91,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                             <SettingsIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                         </Button>
                     </Link>
-                    <ImportDialog />
+                    <ImportDialog lastImportDate={lastImportDate} />
                 </div>
 
                 <div className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
@@ -102,6 +104,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <Suspense key={searchKey} fallback={<DashboardSkeleton />}>
                 <DashboardContent searchParams={params} firstName={firstName} currentDate={currentDate} />
             </Suspense>
+
         </div>
     )
 }

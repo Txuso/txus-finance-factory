@@ -20,10 +20,11 @@ import { ParsedTransaction } from "@/lib/parsers/pdf-parser"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
+import { es } from "date-fns/locale"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Categoria, CATEGORIAS } from "@/lib/types/transaction"
 
-export function ImportDialog() {
+export function ImportDialog({ lastImportDate }: { lastImportDate?: Date | null }) {
     const [open, setOpen] = useState(false)
     const [file, setFile] = useState<File | null>(null)
     const [transactions, setTransactions] = useState<ParsedTransaction[]>([])
@@ -101,10 +102,17 @@ export function ImportDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="gap-2 sm:px-4 px-3 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-800/50">
-                        <Upload className="h-4 w-4" />
-                        <span className="hidden sm:inline">Importar PDF</span>
-                    </Button>
+                    <div className="flex flex-col items-end gap-0.5">
+                        <Button variant="outline" className="gap-2 sm:px-4 px-3 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-800/50">
+                            <Upload className="h-4 w-4" />
+                            <span className="hidden sm:inline">Importar PDF</span>
+                        </Button>
+                        {lastImportDate && (
+                            <span className="text-[10px] text-muted-foreground/60 hidden sm:block pr-1">
+                                Última: {format(lastImportDate, "d MMM yyyy", { locale: es })}
+                            </span>
+                        )}
+                    </div>
                     <div className="flex gap-1">
                         <Button variant="destructive" size="icon" className="h-10 w-10 rounded-2xl shadow-sm hover:bg-rose-600 transition-colors" onClick={(e) => { e.stopPropagation(); handleResetData(); }} title="RESET TRANSACCIONES (Testing)">
                             <Trash2 className="h-4 w-4" />

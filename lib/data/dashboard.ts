@@ -114,6 +114,25 @@ export async function getDashboardData(date: Date, userId: string): Promise<Dash
     };
 }
 
+/**
+ * Returns the most recent import date by looking at the latest `created_at`
+ * across all transactions. PDF imports insert many transactions at once, so
+ * the max created_at is a reliable proxy for the last import date.
+ */
+export async function getLastImportDate(userId: string): Promise<Date | null> {
+    const supabase = await createClient();
+    const { data } = await supabase
+        .from("transacciones")
+        .select("created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+    if (!data?.created_at) return null;
+    return new Date(data.created_at);
+}
+
 export interface MonthlyStat {
     month: string;
     income: number;

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Transaccion, GastoRecurrente } from "@/lib/types/transaction"
-import { TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp, Plus } from "lucide-react"
+import { TrendingDown, Trash2, Pencil, ChevronDown, ChevronUp, Plus, CalendarClock, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { deleteTransaction, excludeRecurringExpense } from "@/app/actions/transaction"
 import { toast } from "sonner"
@@ -64,6 +64,9 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
         };
     });
 
+    // Sort ALWAYS by dia_cobro_estimado (ascending) — regardless of creation/insertion order
+    fixedExpensesList.sort((a, b) => (a.definition.dia_cobro_estimado ?? 31) - (b.definition.dia_cobro_estimado ?? 31));
+
     const matchedTransactionIds = fixedExpensesList.map(item => item.transaction?.id).filter(Boolean);
     const extraFixedExpenses = transactions.filter(t =>
         t.tipo === 'Gasto fijo' &&
@@ -87,6 +90,16 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
         return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
     }
 
+    // --- Próximo Cobro Logic ---
+    const todayDay = new Date().getDate();
+    const pendingItems = fixedExpensesList.filter(item => item.status === 'pending');
+    // Sort pending by dia_cobro_estimado to find the closest upcoming
+    const upcomingPending = pendingItems.find(item => (item.definition.dia_cobro_estimado ?? 0) >= todayDay)
+        ?? pendingItems[0]; // fallback: wrap-around to first of next month
+    const daysUntil = upcomingPending
+        ? (upcomingPending.definition.dia_cobro_estimado ?? 0) - todayDay
+        : null;
+
     return (
         <div className="space-y-6">
             {/* TABLA DE GASTOS FIJOS */}
@@ -108,12 +121,50 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                         </span>
                     </CardTitle>
                 </CardHeader>
+
+                {/* BANNER: PRÓXIMO COBRO */}
+                {fixedExpensesList.length > 0 && (
+                    <div className="mx-4 mb-3">
+                        {upcomingPending ? (
+                            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-100 dark:border-blue-900/50">
+                                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-lg shrink-0">
+                                    <CalendarClock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-500/70 dark:text-blue-400/70">Próximo cobro</p>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{upcomingPending.definition.descripcion}</p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="text-xs text-muted-foreground">Día {upcomingPending.definition.dia_cobro_estimado}</p>
+                                    <PrivacyBlur>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{formatCurrency(upcomingPending.definition.monto_estimado)}</p>
+                                    </PrivacyBlur>
+                                </div>
+                                <Badge className={`shrink-0 text-[10px] px-2 py-0.5 ${daysUntil === 0
+                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200'
+                                        : daysUntil !== null && daysUntil > 0
+                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200'
+                                            : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200'
+                                    }`}>
+                                    {daysUntil === 0 ? 'Hoy' : daysUntil !== null && daysUntil > 0 ? `en ${daysUntil} días` : 'Mes prox.'}
+                                </Badge>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Todos los gastos fijos del mes cobrados</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <CardContent className="p-0 sm:p-4">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="py-2.5">Concepto</TableHead>
+                                    <TableHead className="w-[80px] text-center">Día cobro</TableHead>
                                     <TableHead>Descripción</TableHead>
                                     <TableHead className="text-right">Importe</TableHead>
                                     <TableHead className="w-[100px]"></TableHead>
@@ -136,6 +187,15 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                         <TableRow key={`def-${def.definition.id}`}>
                                                             <TableCell className="py-2 font-medium text-slate-700 dark:text-slate-200">
                                                                 {def.definition.descripcion}
+                                                            </TableCell>
+                                                            <TableCell className="py-2 text-center">
+                                                                {def.definition.dia_cobro_estimado ? (
+                                                                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 mx-auto">
+                                                                        {def.definition.dia_cobro_estimado}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-muted-foreground text-xs">—</span>
+                                                                )}
                                                             </TableCell>
                                                             <TableCell className="py-2 text-xs text-muted-foreground italic">
                                                                 {def.transaction?.notas || def.transaction?.descripcion || "-"}
@@ -161,6 +221,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
                                                     return (
                                                         <TableRow key={`extra-${t.id}`} className="bg-slate-50/50">
                                                             <TableCell className="py-2 font-medium text-slate-600 italic">{t.descripcion}</TableCell>
+                                                            <TableCell className="py-2 text-center"><span className="text-muted-foreground text-xs">—</span></TableCell>
                                                             <TableCell className="py-2 text-xs text-muted-foreground italic">{t.notas || "Gasto Extra"}</TableCell>
                                                             <TableCell className="py-2 text-right font-bold"><PrivacyBlur>{formatCurrency(Math.abs(t.monto))}</PrivacyBlur></TableCell>
                                                             <TableCell className="py-2">
@@ -173,7 +234,7 @@ export function ExpenseTables({ transactions, recurringExpenses }: ExpenseTables
 
                                             {allFixed.length > 5 && (
                                                 <TableRow>
-                                                    <TableCell colSpan={4} className="text-center p-2">
+                                                    <TableCell colSpan={5} className="text-center p-2">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
