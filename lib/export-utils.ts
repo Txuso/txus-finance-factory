@@ -5,6 +5,29 @@ import { format } from "date-fns";
 import { Transaccion } from "@/lib/types/transaction";
 import { formatCurrency } from "@/lib/utils";
 
+export function exportToCSV(transactions: Transaccion[], filename: string) {
+    const headers = ["Fecha", "Descripción", "Monto", "Categoría", "Tipo", "Método de Pago", "Notas"];
+    const rows = transactions.map((t) => [
+        format(new Date(t.fecha), "dd/MM/yyyy"),
+        `"${(t.descripcion || "").replace(/"/g, '""')}"`,
+        t.monto.toString().replace(".", ","),
+        t.categoria || "",
+        t.tipo || "",
+        t.metodo_pago || "",
+        `"${(t.notas || "").replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = [headers.join(";"), ...rows.map((r) => r.join(";"))].join("\n");
+    // BOM for Excel UTF-8 compatibility
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${filename}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 export function exportToExcel(transactions: Transaccion[], filename: string) {
     const data = transactions.map((t) => ({
         Fecha: format(new Date(t.fecha), "dd/MM/yyyy"),

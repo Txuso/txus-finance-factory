@@ -7,9 +7,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileDown, FileSpreadsheet, FileText, Download } from "lucide-react"
+import { FileDown, FileSpreadsheet, FileText, Download, FileCode2 } from "lucide-react"
 import { Transaccion } from "@/lib/types/transaction"
-import { exportToExcel, exportToPDF } from "@/lib/export-utils"
+import { exportToExcel, exportToPDF, exportToCSV } from "@/lib/export-utils"
 import { toast } from "sonner"
 
 interface ExportButtonsProps {
@@ -44,6 +44,16 @@ export function ExportButtons({ transactions, monthLabel, kpis }: ExportButtonsP
         }
     }
 
+    const handleCSV = () => {
+        try {
+            exportToCSV(transactions, `TxusFinance_${monthLabel.replace(/\s+/g, "_")}`)
+            toast.success("CSV exportado correctamente")
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al exportar el CSV")
+        }
+    }
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -74,6 +84,15 @@ export function ExportButtons({ transactions, monthLabel, kpis }: ExportButtonsP
                         <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
                     </div>
                     <span className="text-sm">Datos Excel</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    onClick={handleCSV}
+                    className="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-950/30 font-medium transition-colors group"
+                >
+                    <div className="p-1.5 bg-sky-50 dark:bg-sky-900/30 rounded-md group-hover:bg-sky-100 dark:group-hover:bg-sky-800/40">
+                        <FileCode2 className="h-4 w-4 text-sky-500" />
+                    </div>
+                    <span className="text-sm">Exportar CSV</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

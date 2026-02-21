@@ -133,6 +133,42 @@ export async function getLastImportDate(userId: string): Promise<Date | null> {
     return new Date(data.created_at);
 }
 
+/**
+ * Returns the average monthly variable expenses over the last `months` months
+ * (not including the current month), used for the progress bar feature.
+ */
+export async function getVariableExpensesAverage(
+    currentDate: Date,
+    userId: string,
+    months: number = 3
+): Promise<number> {
+    const supabase = await createClient();
+
+    // Build date ranges for the previous `months` months
+    const totals: number[] = [];
+    for (let i = 1; i <= months; i++) {
+        const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        const start = format(startOfMonth(d), 'yyyy-MM-dd');
+        const end = format(endOfMonth(d), 'yyyy-MM-dd');
+
+        const { data } = await supabase
+            .from("transacciones")
+            .select("monto")
+            .eq("user_id", userId)
+            .eq("tipo", "Gasto variable")
+            .gte("fecha", start)
+            .lte("fecha", end);
+
+        if (data && data.length > 0) {
+            const total = data.reduce((sum, t) => sum + Math.abs(t.monto), 0);
+            totals.push(total);
+        }
+    }
+
+    if (totals.length === 0) return 0;
+    return totals.reduce((a, b) => a + b, 0) / totals.length;
+}
+
 export interface MonthlyStat {
     month: string;
     income: number;

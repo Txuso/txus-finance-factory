@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights, getLastImportDate } from "@/lib/data/dashboard"
+import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights, getLastImportDate, getVariableExpensesAverage } from "@/lib/data/dashboard"
 import { createClient } from "@/lib/supabase/server"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
@@ -21,6 +21,7 @@ import { cn, cleanDescription } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { GlobalSearch } from "@/components/dashboard/GlobalSearch"
 import { PrivacyToggle } from "@/components/layout/PrivacyToggle"
+import { DarkModeToggle } from "@/components/layout/DarkModeToggle"
 import { PrivacyBlur } from "@/components/layout/PrivacyBlur"
 import { DashboardTabsWrapper } from "@/components/dashboard/DashboardTabsWrapper"
 import { DashboardInsights } from "@/components/dashboard/DashboardInsights"
@@ -82,6 +83,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 {/* Botones de Acción - Mejorados para Mobile */}
                 <div className="flex items-center justify-center gap-2 w-full max-w-xs sm:absolute sm:top-0 sm:right-0 sm:w-auto mt-2 sm:mt-0">
                     <PrivacyToggle />
+                    <DarkModeToggle />
                     <Link href="/settings">
                         <Button
                             variant="ghost"
@@ -131,12 +133,14 @@ async function DashboardContent({
     const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
 
     // Parallelize pre-render data fetching
-    const [yearlyStats, categoryStats, dashboardData, insights] = await Promise.all([
+    const [yearlyStats, categoryStats, dashboardData, insights, variableAvgRaw] = await Promise.all([
         getYearlyStats(statsYear, userId),
         getCategoryStats(statsYear, userId),
         getDashboardData(currentDate, userId),
-        getFinancialInsights(currentDate, userId)
+        getFinancialInsights(currentDate, userId),
+        getVariableExpensesAverage(currentDate, userId, 3)
     ]);
+    const variableAverage = variableAvgRaw;
 
     const { transactions, recurringExpenses, config } = dashboardData;
 
@@ -199,59 +203,118 @@ async function DashboardContent({
     const isObjectiveMet = savingsPercentage >= targetPercentage;
     const savingsNeeded = (totalIncome * targetPercentage) - actualSavings;
 
+    // Monthly summary stats (for 2.1 banner)
+    const totalRecurring = recurringExpenses.length;
+    const estimatedFixedTotal = recurringExpenses.reduce((s, r) => s + r.monto_estimado, 0);
+    const monthLabel = format(currentDate, "MMMM", { locale: es });
+    const monthLabelCap = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
     return (
         <div className="space-y-4 sm:space-y-6">
-            <div className="flex flex-col items-center space-y-2 text-center">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-6xl mt-2">
-                    {/* Mensaje Motivacional de Objetivo */}
-                    <div className={cn(
-                        "flex items-center justify-center p-4 rounded-2xl border transition-all duration-500 shadow-xl relative overflow-hidden group",
-                        isObjectiveMet
-                            ? "bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-800 dark:text-emerald-300 shadow-emerald-500/5"
-                            : "bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border-slate-200/50 text-slate-700 dark:text-slate-300"
-                    )}>
-                        {isObjectiveMet && (
-                            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 blur-2xl animate-pulse" />
-                        )}
-                        <p className="text-sm sm:text-base font-medium leading-tight relative z-10">
-                            {isObjectiveMet ? (
-                                <>
-                                    <span className="font-black text-xl sm:text-2xl block italic tracking-tighter uppercase mb-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-emerald-200 bg-clip-text text-transparent">
-                                        ¡BRUTAL {firstName.toUpperCase()}! 🚀
-                                    </span>
-                                    Tu ahorro es del <span className="font-black text-emerald-600 dark:text-emerald-400"><PrivacyBlur>{(savingsPercentage * 100).toFixed(1)}%</PrivacyBlur></span>. Meta superada con creces.
-                                </>
-                            ) : (
-                                <>
-                                    <span className="font-black text-xl sm:text-2xl block uppercase tracking-tighter mb-1 text-slate-400">
-                                        VAMOS {firstName.toUpperCase()} 💪
-                                    </span>
-                                    Enfoque total. Te faltan <span className="font-black text-rose-500 dark:text-rose-400"><PrivacyBlur>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</PrivacyBlur></span> para el objetivo.
-                                </>
-                            )}
-                        </p>
+            {transactions.length === 0 ? (
+                /* --- SIN DATOS: no transactions imported for this month --- */
+                <div className="flex flex-col items-center space-y-4 text-center w-full max-w-6xl mx-auto mt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="w-full flex items-start gap-4 p-5 rounded-2xl bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-800/40 shadow-sm">
+                        <div className="shrink-0 p-2 bg-amber-100 dark:bg-amber-900/40 rounded-xl">
+                            <span className="text-2xl">📅</span>
+                        </div>
+                        <div className="text-left">
+                            <p className="font-black text-base text-amber-800 dark:text-amber-300 tracking-tight mb-0.5">
+                                Sin datos para {monthLabelCap}
+                            </p>
+                            <p className="text-sm text-amber-700/80 dark:text-amber-400/80">
+                                No hay transacciones importadas para este mes. Importa tu extracto PDF o añade transacciones manualmente para ver el análisis completo.
+                            </p>
+                        </div>
                     </div>
-
-                    <SavingsGoalProgress
-                        currentSavings={actualSavings}
-                        totalIncome={totalIncome}
-                        targetPercentage={targetPercentage}
-                    />
-
                     <EmergencyFundCard
                         actual={Number(config?.fondo_emergencia_actual || 0)}
                         objetivo={Number(config?.fondo_emergencia_objetivo || 12000)}
                     />
                 </div>
+            ) : (
+                /* --- CON DATOS: normal KPI grid --- */
+                <div className="flex flex-col items-center space-y-2 text-center">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-6xl mt-2">
+                        {/* Mensaje Motivacional de Objetivo */}
+                        <div className={cn(
+                            "flex items-center justify-center p-4 rounded-2xl border transition-all duration-500 shadow-xl relative overflow-hidden group",
+                            isObjectiveMet
+                                ? "bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-800 dark:text-emerald-300 shadow-emerald-500/5"
+                                : "bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border-slate-200/50 text-slate-700 dark:text-slate-300"
+                        )}>
+                            {isObjectiveMet && (
+                                <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 blur-2xl animate-pulse" />
+                            )}
+                            <p className="text-sm sm:text-base font-medium leading-tight relative z-10">
+                                {isObjectiveMet ? (
+                                    <>
+                                        <span className="font-black text-xl sm:text-2xl block italic tracking-tighter uppercase mb-1 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-emerald-200 bg-clip-text text-transparent">
+                                            ¡BRUTAL {firstName.toUpperCase()}! 🚀
+                                        </span>
+                                        Tu ahorro es del <span className="font-black text-emerald-600 dark:text-emerald-400"><PrivacyBlur>{(savingsPercentage * 100).toFixed(1)}%</PrivacyBlur></span>. Meta superada con creces.
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="font-black text-xl sm:text-2xl block uppercase tracking-tighter mb-1 text-slate-400">
+                                            VAMOS {firstName.toUpperCase()} 💪
+                                        </span>
+                                        Enfoque total. Te faltan <span className="font-black text-rose-500 dark:text-rose-400"><PrivacyBlur>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(savingsNeeded)}</PrivacyBlur></span> para el objetivo.
+                                    </>
+                                )}
+                            </p>
+                        </div>
+
+                        <SavingsGoalProgress
+                            currentSavings={actualSavings}
+                            totalIncome={totalIncome}
+                            targetPercentage={targetPercentage}
+                        />
+
+                        <EmergencyFundCard
+                            actual={Number(config?.fondo_emergencia_actual || 0)}
+                            objetivo={Number(config?.fondo_emergencia_objetivo || 12000)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* MONTHLY SUMMARY BANNER (2.1) */}
+            <div className="w-full max-w-6xl">
+                <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{monthLabelCap}</span>
+                    <div className="h-3 w-px bg-slate-200 dark:bg-slate-700" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                        <span className="font-black">{totalRecurring}</span> gastos fijos previstos
+                    </span>
+                    <div className="h-3 w-px bg-slate-200 dark:bg-slate-700" />
+                    <PrivacyBlur>
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                            Total Gastos Fijos: <span className="font-black">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(estimatedFixedTotal)}</span>
+                        </span>
+                    </PrivacyBlur>
+                    {transactions.length > 0 && (<>
+                        <div className="h-3 w-px bg-slate-200 dark:bg-slate-700" />
+                        <PrivacyBlur>
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                Gastos Variables: <span className="font-black text-rose-500">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalVariable)}</span>
+                            </span>
+                        </PrivacyBlur>
+                    </>)}
+                </div>
             </div>
 
-            <DashboardInsights insights={insights} />
-
-            <DashboardKPIs
-                totalIncome={totalIncome}
-                totalExpenses={totalFixed + totalVariable}
-                totalInvestments={totalInvestments}
-            />
+            {/* KPIs + Insights: only when there are transactions */}
+            {transactions.length > 0 && (
+                <>
+                    <DashboardInsights insights={insights} />
+                    <DashboardKPIs
+                        totalIncome={totalIncome}
+                        totalExpenses={totalFixed + totalVariable}
+                        totalInvestments={totalInvestments}
+                    />
+                </>
+            )}
 
             <DashboardTabsWrapper defaultValue="summary">
                 <div className="flex items-center justify-center mb-6">
@@ -285,6 +348,7 @@ async function DashboardContent({
                             <ExpenseTables
                                 transactions={transactions}
                                 recurringExpenses={recurringExpenses}
+                                variableAverage={variableAverage}
                             />
                         </div>
                     </div>
