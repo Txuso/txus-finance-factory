@@ -3,7 +3,6 @@ import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsight
 import { createClient } from "@/lib/supabase/server"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
-import { AddTransactionFAB } from "@/components/transactions/AddTransactionFAB"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MonthSelectorWrapper } from "@/components/dashboard/MonthSelectorWrapper"
 import { YearSelector } from "@/components/dashboard/YearSelector"
@@ -405,8 +404,7 @@ async function DashboardContent({
                         </div>
                     </div>
                 </TabsContent>
-            </DashboardTabsWrapper >
-            <AddTransactionFAB />
-        </div >
+            </DashboardTabsWrapper>
+        </div>
     )
 }
