@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights, getLastImportDate, getVariableExpensesAverage } from "@/lib/data/dashboard"
+import { getDashboardData, getYearlyStats, getCategoryStats, getFinancialInsights, getLastImportDate, getVariableExpensesAverage, getAverageMonthlyIncome } from "@/lib/data/dashboard"
 import { createClient } from "@/lib/supabase/server"
 import { ExpenseTables } from "@/components/dashboard/ExpenseTables"
 import { MonthlyComparisonChart } from "@/components/dashboard/MonthlyComparisonChart"
@@ -133,14 +133,16 @@ async function DashboardContent({
     const statsYear = params.statsYear ? parseInt(params.statsYear as string) : now.getFullYear();
 
     // Parallelize pre-render data fetching
-    const [yearlyStats, categoryStats, dashboardData, insights, variableAvgRaw] = await Promise.all([
+    const [yearlyStats, categoryStats, dashboardData, insights, variableAvgRaw, projectedIncomeRaw] = await Promise.all([
         getYearlyStats(statsYear, userId),
         getCategoryStats(statsYear, userId),
         getDashboardData(currentDate, userId),
         getFinancialInsights(currentDate, userId),
-        getVariableExpensesAverage(currentDate, userId, 3)
+        getVariableExpensesAverage(currentDate, userId, 3),
+        getAverageMonthlyIncome(currentDate, userId, 3)
     ]);
     const variableAverage = variableAvgRaw;
+    const projectedIncome = projectedIncomeRaw;
 
     const { transactions, recurringExpenses, config } = dashboardData;
 
@@ -198,10 +200,17 @@ async function DashboardContent({
 
     // 4. Ahorro y Objetivo
     const actualSavings = totalIncome - (totalFixed + totalVariable);
-    const savingsPercentage = totalIncome > 0 ? (actualSavings / totalIncome) : 0;
     const targetPercentage = config?.objetivo_ahorro_porcentaje || 0.20;
-    const isObjectiveMet = savingsPercentage >= targetPercentage;
-    const savingsNeeded = (totalIncome * targetPercentage) - actualSavings;
+
+    // Use projected income when the main salary hasn't arrived yet.
+    // Threshold: if current income is less than 50% of the historical average,
+    // the nómina is likely still pending (even if small misc. income exists).
+    const isProjected = projectedIncome > 0 && totalIncome < projectedIncome * 0.5;
+    const effectiveIncome = isProjected ? projectedIncome : totalIncome;
+    const effectiveSavings = effectiveIncome - (totalFixed + totalVariable);
+    const savingsPercentage = effectiveIncome > 0 ? (effectiveSavings / effectiveIncome) : 0;
+    const isObjectiveMet = !isProjected && savingsPercentage >= targetPercentage;
+    const savingsNeeded = (effectiveIncome * targetPercentage) - effectiveSavings;
 
     // Monthly summary stats (for 2.1 banner)
     const totalRecurring = recurringExpenses.length;
@@ -241,10 +250,15 @@ async function DashboardContent({
                             "flex items-center justify-center p-4 rounded-2xl border transition-all duration-500 shadow-xl relative overflow-hidden group",
                             isObjectiveMet
                                 ? "bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 text-emerald-800 dark:text-emerald-300 shadow-emerald-500/5"
-                                : "bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border-slate-200/50 text-slate-700 dark:text-slate-300"
+                                : isProjected
+                                    ? "bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/50 dark:border-amber-800/40 text-amber-800 dark:text-amber-300"
+                                    : "bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border-slate-200/50 text-slate-700 dark:text-slate-300"
                         )}>
                             {isObjectiveMet && (
                                 <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 blur-2xl animate-pulse" />
+                            )}
+                            {isProjected && (
+                                <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10 blur-2xl" />
                             )}
                             <p className="text-sm sm:text-base font-medium leading-tight relative z-10">
                                 {isObjectiveMet ? (
@@ -253,6 +267,13 @@ async function DashboardContent({
                                             ¡BRUTAL {firstName.toUpperCase()}! 🚀
                                         </span>
                                         Tu ahorro es del <span className="font-black text-emerald-600 dark:text-emerald-400"><PrivacyBlur>{(savingsPercentage * 100).toFixed(1)}%</PrivacyBlur></span>. Meta superada con creces.
+                                    </>
+                                ) : isProjected ? (
+                                    <>
+                                        <span className="font-black text-xl sm:text-2xl block uppercase tracking-tighter mb-1 text-amber-500 dark:text-amber-400">
+                                            PREVISTO {firstName.toUpperCase()} 📊
+                                        </span>
+                                        Cuando cobres, ahorrarás ~<span className="font-black text-amber-600 dark:text-amber-400"><PrivacyBlur>{(savingsPercentage * 100).toFixed(1)}%</PrivacyBlur></span>. Cada gasto lo reduce.
                                     </>
                                 ) : (
                                     <>
@@ -266,9 +287,11 @@ async function DashboardContent({
                         </div>
 
                         <SavingsGoalProgress
-                            currentSavings={actualSavings}
+                            currentSavings={effectiveSavings}
                             totalIncome={totalIncome}
                             targetPercentage={targetPercentage}
+                            projectedIncome={projectedIncome}
+                            isProjected={isProjected}
                         />
 
                         <EmergencyFundCard
